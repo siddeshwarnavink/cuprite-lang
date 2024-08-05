@@ -1,0 +1,9 @@
+a: i32 = ask "What is A?"
+b: i32 = ask "What is B?"
+c = a + b
+
+whn c is 12 do
+    say "You won jackpot!"
+otw
+    say "You got! " . c
+end

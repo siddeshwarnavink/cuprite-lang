@@ -1,0 +1,14 @@
+trt Nameable
+    name: string
+    
+    fun say_hello(n: string)
+        say me.name . " says hello to " . n
+    end
+end
+
+obj Human
+    use Nameable
+end
+
+h: Human
+h.say_hello "Sam"

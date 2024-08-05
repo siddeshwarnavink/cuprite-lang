@@ -1,0 +1,7 @@
+n: i32 = ask "Enter number?"
+i: i32 = 0
+
+till i >= n do
+    say i . "\n"
+    i++
+end

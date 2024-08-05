@@ -1,0 +1,47 @@
+# Ignore build directories and artifacts
+/build/
+/build*/
+cuprite
+test_mylib
+libmylib.a
+
+# Ignore CMake generated files
+CMakeFiles/
+/CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+
+# Ignore Testing directory created by CMake
+Testing/
+
+# Ignore _deps directory created by FetchContent
+_deps/
+
+# Ignore executables and other build artifacts
+*.exe
+*.out
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+
+# Ignore IDE and editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.user
+*.ncb
+*.sdf
+*.suo
+*.vcxproj*
+*.vcproj*
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
