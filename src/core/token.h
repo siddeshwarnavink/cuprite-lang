@@ -7,7 +7,12 @@
  * @file token.h
  */
 
-typedef enum { token_num_int, token_plus, token_eof } token_type;
+typedef enum {
+  token_num_int,
+  token_num_float,
+  token_plus,
+  token_eof
+} token_type;
 
 typedef struct sToken {
   token_type type; /**< Token type  */
@@ -23,26 +28,32 @@ typedef struct sToken_list {
  * @brief Creates token list.
  * @param list Token list pointer.
  */
-void create_token_list(token_list *list);
+void token_list_create(token_list *list);
 
 /**
  * @brief Append token to end of list.
  * @param list Token list pointer.
  * @param tok Token to append.
  */
-void append_token_list(token_list *list, token *tok);
+void token_list_append(token_list *list, token *tok);
 
 /**
  * @brief Destroy token list.
  * @param list Token list pointer.
  */
-void destroy_token_list(token_list *list);
+void token_list_destroy(token_list *list);
+
+/**
+ * @brief Clears the tokens in list.
+ * @param list Token list pointer.
+ */
+void token_list_clear(token_list *list);
 
 /**
  * @brief Create token.
  * @param list Token pointer.
  */
-void create_token(token *token, token_type type, char *value);
+void token_create(token *token, token_type type, char *value);
 
 /**
  * @brief Pretty-print token to stdout.

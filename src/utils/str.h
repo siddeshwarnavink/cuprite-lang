@@ -44,6 +44,13 @@ unsigned int str_size(str *s);
 void str_append(str *s, const char *val);
 
 /**
+ * @brief Append a character at the end.
+ * @param s String pointer.
+ * @param ch Character to append
+ */
+void str_append_ch(str *s, char ch);
+
+/**
  * @brief Clear contents of string.
  * @param s String pointer.
  */

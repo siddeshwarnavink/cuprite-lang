@@ -50,6 +50,18 @@ void str_append(str *s, const char *val) {
   (*s)->size += val_len;
 }
 
+void str_append_ch(str *s, char ch) {
+  char *new_data = realloc((*s)->data, (*s)->size + 1 * sizeof(char));
+  if (new_data == NULL) {
+    perror("Failed to allocate memory for appending character string");
+    exit(EXIT_FAILURE);
+  }
+
+  (*s)->data = new_data;
+  (*s)->data[(*s)->size] = ch;
+  (*s)->data[++(*s)->size] = '\0';
+}
+
 void str_clear(str *s) {
   if ((*s)->data != NULL) {
     free((*s)->data);

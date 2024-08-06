@@ -7,13 +7,12 @@
 #include "lexer.h"
 #include "token.h"
 
-static bool _is_whitespace(char *tok_ch);
+static bool _is_whitespace(char ch);
 static bool _is_number(char ch);
+static token_type _number_type(char *num);
 
-void parse_line(char *line) {
+void parse_line(token_list *list, char *line) {
   unsigned int line_size = strlen(line);
-  token_list list;
-  create_token_list(&list);
 
   str tok_str;
   str_create(&tok_str, "");
@@ -21,16 +20,13 @@ void parse_line(char *line) {
   bool reading_num = false;
 
   for (unsigned int i = 0; i < line_size; i++) {
-    char *tok_ch = malloc(2 * sizeof(char));
-    tok_ch[0] = line[i];
-    tok_ch[1] = '\0';
-
-    if (_is_whitespace(tok_ch)) {
+    char ch = line[i];
+    if (_is_whitespace(ch)) {
       continue;
     }
 
-    str_append(&tok_str, tok_ch);
-    token tok;
+    str_append_ch(&tok_str, ch);
+    token tok = NULL;
 
     // Reading number
     if (_is_number(line[i])) {
@@ -38,37 +34,57 @@ void parse_line(char *line) {
     }
     if (reading_num) {
       if ((i + 1 < line_size && !_is_number(line[i + 1])) ||
-          (i + 1 == line_size)) {
-        create_token(&tok, token_num_int, str_val(&tok_str));
+          i + 1 == line_size) {
+        char *num_str = str_val(&tok_str);
+        token_type num_type = _number_type(num_str);
+        token_create(&tok, num_type, num_str);
         reading_num = false;
       }
-    } else if (!reading_num) {
-      // Reading operators
-      switch (line[i]) {
-      case '+':
-        create_token(&tok, token_plus, NULL);
-        break;
-      }
+    }
+
+    // Reading operators
+    switch (line[i]) {
+    case '+':
+      token_create(&tok, token_plus, NULL);
+      break;
     }
 
     if (tok != NULL) {
       token_pp(&tok);
-      append_token_list(&list, &tok);
+      token_list_append(list, &tok);
       str_clear(&tok_str);
     }
-
-    free(tok_ch);
   }
 
   str_destroy(&tok_str);
-  destroy_token_list(&list);
 }
 
-static bool _is_whitespace(char *tok_ch) {
-  return strcmp(tok_ch, " ") == 0 || strcmp(tok_ch, "\t") == 0 ||
-         strcmp(tok_ch, "\n") == 0 || strcmp(tok_ch, "\r") == 0;
+static bool _is_whitespace(char ch) {
+  return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
 }
 
 static bool _is_number(char ch) {
   return ('0' <= ch && ch <= '9') || (ch == '.');
+}
+
+static token_type _number_type(char *num) {
+  int len = strlen(num);
+  bool is_float = false;
+  int i = 0;
+
+  if (num[0] == '-' || num[0] == '+') {
+    i++;
+  }
+
+  for (; i < len; i++) {
+    if (num[i] == '.') {
+      is_float = true;
+      break;
+    }
+  }
+
+  if (is_float) {
+    return token_num_float;
+  }
+  return token_num_int;
 }

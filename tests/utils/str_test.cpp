@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-#include "utils/str.h"
+#include "../../src/utils/str.h"
 }
 
 TEST(StrTest, TestStringCreate) {
@@ -35,6 +35,10 @@ TEST(StrTest, TestStringAppend) {
 
   EXPECT_STREQ(str_val(st), "helloworld");
   EXPECT_EQ(str_size(st), 10);
+
+  str_append_ch(st, '!');
+  EXPECT_STREQ(str_val(st), "helloworld!");
+  EXPECT_EQ(str_size(st), 11);
 
   str_destroy(st);
 }

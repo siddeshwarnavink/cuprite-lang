@@ -11,6 +11,6 @@
  * @brief Parese single line of code to tokens
  * @param line Line of code.
  */
-void parse_line(char *line);
+void parse_line(token_list *list, char *line);
 
 #endif

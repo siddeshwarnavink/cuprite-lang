@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/lexer.h"
+#include "core/token.h"
 
 int main() {
   bool running = true;
@@ -19,7 +20,9 @@ int main() {
         printf("bye");
         running = false;
       } else {
-        parse_line(input);
+        token_list list;
+        token_list_create(&list);
+        parse_line(&list, input);
       }
     } else {
       printf("Statement too long\n");
