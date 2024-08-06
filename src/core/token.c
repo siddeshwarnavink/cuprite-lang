@@ -67,8 +67,22 @@ static const char *_get_token_label(token_type type) {
     return "INT";
   case token_num_float:
     return "FLOAT";
+  case token_oparentheses:
+    return "(";
+  case token_cparentheses:
+    return ")";
   case token_plus:
     return "+";
+  case token_hyphen:
+    return "-";
+  case token_asterisk:
+    return "*";
+  case token_fslash:
+    return "/";
+  case token_percent:
+    return "%";
+  case token_equal:
+    return "=";
   case token_eof:
     return "EoF";
   default:

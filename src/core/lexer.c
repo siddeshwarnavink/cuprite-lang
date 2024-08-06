@@ -44,8 +44,29 @@ void parse_line(token_list *list, char *line) {
 
     // Reading operators
     switch (line[i]) {
+    case '(':
+      token_create(&tok, token_oparentheses, NULL);
+      break;
+    case ')':
+      token_create(&tok, token_cparentheses, NULL);
+      break;
     case '+':
       token_create(&tok, token_plus, NULL);
+      break;
+    case '-':
+      token_create(&tok, token_hyphen, NULL);
+      break;
+    case '*':
+      token_create(&tok, token_asterisk, NULL);
+      break;
+    case '/':
+      token_create(&tok, token_fslash, NULL);
+      break;
+    case '%':
+      token_create(&tok, token_percent, NULL);
+      break;
+    case '=':
+      token_create(&tok, token_equal, NULL);
       break;
     }
 

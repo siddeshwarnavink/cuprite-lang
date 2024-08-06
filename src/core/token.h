@@ -11,6 +11,13 @@ typedef enum {
   token_num_int,
   token_num_float,
   token_plus,
+  token_hyphen,
+  token_asterisk,
+  token_fslash, /**< Forward slash  */
+  token_percent,
+  token_oparentheses, /**< Open parentheses  */
+  token_cparentheses, /**< Close parentheses  */
+  token_equal,
   token_eof
 } token_type;
 

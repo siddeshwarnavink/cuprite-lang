@@ -30,5 +30,6 @@ file(GLOB_RECURSE TEST_FILES "tests/*.cpp")
 
 add_executable(test_mylib ${TEST_FILES})
 target_link_libraries(test_mylib PRIVATE mylib gtest gtest_main)
+target_compile_options(test_mylib PRIVATE -Wno-write-strings)
 
 add_test(NAME cupriteTest COMMAND test_mylib)
