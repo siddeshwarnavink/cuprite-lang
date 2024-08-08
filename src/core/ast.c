@@ -26,12 +26,13 @@ void ast_create_node(ast_node *node, ast_node_type type, ast_data data) {
     (*node)->data = malloc(sizeof(float));
     break;
   }
-  (*node)->data = data;
 
   if ((*node)->data == NULL) {
     perror("Failed to allocate memory for node data");
     exit(EXIT_FAILURE);
   }
+
+  (*node)->data = data;
 }
 
 void ast_destroy_node(ast_node *node) {

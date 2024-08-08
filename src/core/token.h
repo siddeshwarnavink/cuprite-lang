@@ -1,6 +1,8 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
+#include <stdbool.h>
+
 #include "../utils/str.h"
 
 /**
@@ -30,6 +32,11 @@ typedef struct sToken_list {
   token *tokens;     /**< Array of tokens  */
   unsigned int size; /**< Size of array  */
 } *token_list;
+
+typedef struct sToken_stack {
+  token data;
+  struct sToken_stack *next;
+} *token_stack;
 
 /**
  * @brief Creates token list.
@@ -67,5 +74,37 @@ void token_create(token *token, token_type type, char *value);
  * @param list Token pointer.
  */
 void token_pp(token *token);
+
+/**
+ * @brief Create a token stack.
+ * @param stack Token stack pointer.
+ * @param data Token.
+ */
+void token_stack_create(token_stack *stack, token data);
+
+/**
+ * @brief Push a token into stack
+ * @param stack Token stack pointer.
+ * @param data Token.
+ */
+void token_stack_push(token_stack *stack, token data);
+
+/**
+ * @brief Check if the token stack is empty
+ * @param stack Token stack pointer.
+ */
+bool token_stack_empty(token_stack *stack);
+
+/**
+ * @brief Pop token from stack
+ * @param stack Token stack pointer.
+ */
+token token_stack_pop(token_stack *stack);
+
+/**
+ * @brief Retrive pointer of the top element of stack.
+ * @param stack Token stack pointer.
+ */
+token token_stack_top(token_stack *stack);
 
 #endif
