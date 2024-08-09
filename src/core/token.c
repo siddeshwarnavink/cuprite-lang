@@ -104,10 +104,9 @@ void token_create(token *token, token_type type, char *value) {
   }
 }
 
-void token_pp(token *token) {
-  printf("Token(type:\"%s\", value: \"%s\")\n",
-         _get_token_label((*token)->type),
-         (*token)->value != NULL ? str_val(&((*token)->value)) : "<NULL>");
+void token_pp(token token) {
+  printf("Token(type:\"%s\", value: \"%s\")\n", _get_token_label(token->type),
+         token->value != NULL ? str_val(&(token->value)) : "<NULL>");
 }
 
 void token_stack_create(token_stack *stack, token data) {
@@ -153,4 +152,11 @@ token token_stack_top(token_stack *stack) {
     exit(EXIT_FAILURE);
   }
   return (*stack)->data;
+}
+
+void token_destroy(token *token) {
+  str my_str = (*token)->value;
+  str_destroy(&my_str);
+  free(*token);
+  *token = NULL;
 }

@@ -32,7 +32,6 @@ typedef union uAstData {
 typedef struct sAstNode {
   ast_node_type type;
   ast_data data;
-  ast_node next;
 } sAstNode;
 
 /**
@@ -51,21 +50,14 @@ void ast_destroy_node(ast_node *node);
 
 /**
  * @brief Parse tokens to create AST.
- * @param head Root node of AST.
  * @param tokens Tokens list.
  */
-void ast_parse_tokens(ast_node *head, token_list *tokens);
-
-/**
- * @brief Destroy the AST.
- * @param head Root node of AST.
- */
-void ast_destroy_tree(ast_node *head);
+void ast_parse_tokens(token_list tokens);
 
 /**
  * @brief Pretty-print the AST.
  * @param head Root node of AST.
  */
-void ast_pp(ast_node *head);
+void ast_pp(ast_node head);
 
 #endif

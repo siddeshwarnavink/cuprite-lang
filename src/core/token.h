@@ -40,7 +40,7 @@ typedef struct sToken_stack {
 
 /**
  * @brief Creates token list.
- * @param list Token list pointer.
+ * @param list Token list.
  */
 void token_list_create(token_list *list);
 
@@ -70,10 +70,16 @@ void token_list_clear(token_list *list);
 void token_create(token *token, token_type type, char *value);
 
 /**
+ * @brief Destroy token.
+ * @param list Token pointer.
+ */
+void token_destroy(token *token);
+
+/**
  * @brief Pretty-print token to stdout.
  * @param list Token pointer.
  */
-void token_pp(token *token);
+void token_pp(token token);
 
 /**
  * @brief Create a token stack.

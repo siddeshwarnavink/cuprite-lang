@@ -4,6 +4,7 @@
 
 extern "C" {
 #include "../../src/core/ast.h"
+#include "../../src/core/lexer.h"
 }
 
 TEST(AstTest, TestNode) {
@@ -22,4 +23,18 @@ TEST(AstTest, TestNode) {
   EXPECT_FLOAT_EQ(n->data->val_float, 69.42);
   ast_destroy_node(&n);
   EXPECT_EQ(n, nullptr);
+}
+
+TEST(AstTest, TestArithmetic) {
+  token_list list;
+  token_list_create(&list);
+
+  char stm1[] = "\t1 +2 + 3";
+  parse_line(&list, stm1);
+
+  ast_parse_tokens(list);
+
+  EXPECT_TRUE(true);
+
+  token_list_destroy(&list);
 }

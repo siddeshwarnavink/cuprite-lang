@@ -7,10 +7,19 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 file(GLOB_RECURSE SRC_FILES "src/*.c")
 
+# Glib
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+include_directories(${GLIB_INCLUDE_DIRS})
 add_library(mylib ${SRC_FILES})
+
 target_include_directories(mylib PUBLIC src)
+target_link_libraries(mylib PUBLIC ${GLIB_LIBRARIES})
 
 add_executable(cuprite ${SRC_FILES})
 target_link_libraries(cuprite PRIVATE mylib)

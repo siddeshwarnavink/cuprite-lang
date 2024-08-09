@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/ast.h"
 #include "core/lexer.h"
 #include "core/token.h"
 
@@ -23,6 +24,8 @@ int main() {
         token_list list;
         token_list_create(&list);
         parse_line(&list, input);
+        ast_parse_tokens(list);
+        token_list_destroy(&list);
       }
     } else {
       printf("Statement too long\n");
