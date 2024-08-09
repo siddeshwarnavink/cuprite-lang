@@ -29,7 +29,7 @@ TEST(AstTest, TestArithmetic) {
   token_list list;
   token_list_create(&list);
 
-  char stm1[] = "\t1 +2 + 3";
+  char stm1[] = "1+2*3";
   parse_line(&list, stm1);
 
   ast_parse_tokens(list);

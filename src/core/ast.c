@@ -74,17 +74,14 @@ void ast_parse_tokens(token_list tokens) {
     token tok = tokens->tokens[i];
 
     // check if operand
-    if (!_operator_token(tok) &&
-        ((i + 1 < tokens->size && _operator_token(tokens->tokens[i + 1])) ||
-         (i - 1 >= 0 && _operator_token(tokens->tokens[i - 1])))) {
-
+    if (!_operator_token(tok)) {
       ast_node node;
       _extract_from_token(&node, tok);
       g_queue_push_tail(operand_stack, node);
     }
 
     // its operator
-    else {
+    else if (_operator_token(tok)) {
       token top;
       while ((top = (token)g_queue_peek_tail(operator_stack)) != NULL &&
              _arithmetic_operator_precedence(top->type) <=
@@ -92,14 +89,13 @@ void ast_parse_tokens(token_list tokens) {
         ast_node node;
         _make_arithmetic_node(&node, operator_stack, operand_stack);
         g_queue_push_tail(operand_stack, node);
-        g_queue_push_tail(operator_stack, tok);
       }
+      g_queue_push_tail(operator_stack, tok);
     }
   }
 
   // process rest of stack
   while (!g_queue_is_empty(operator_stack)) {
-    token tok = (token)g_queue_pop_tail(operator_stack);
     ast_node node;
     _make_arithmetic_node(&node, operator_stack, operand_stack);
     g_queue_push_tail(operand_stack, node);
@@ -115,6 +111,8 @@ void ast_parse_tokens(token_list tokens) {
   // cleanup
   g_queue_free_full(operand_stack, _operand_stack_cleanup);
   g_queue_free_full(operator_stack, _operator_stack_cleanup);
+
+  //...
 }
 
 void ast_pp(ast_node head) {
@@ -199,31 +197,42 @@ static void _extract_from_token(ast_node *node, token tok) {
 
 static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
                                   GQueue *operand_stack) {
-  token opr1 = g_queue_pop_tail(operand_stack);
-  token opr2 = g_queue_pop_tail(operand_stack);
+  ast_node opr1 = g_queue_pop_tail(operand_stack);
+  ast_node opr2 = g_queue_pop_tail(operand_stack);
   token opt = g_queue_pop_tail(operator_stack);
 
-  ast_node opr1_node;
-  ast_node opr2_node;
-  _extract_from_token(&opr1_node, opr1);
-  _extract_from_token(&opr2_node, opr2);
+  if (opr1 == NULL || opr2 == NULL || opt == NULL) {
+    return;
+  }
 
-  ast_data *node_d = (ast_data *)malloc(sizeof(struct sAstArithmeticData));
-  (*node_d)->arithmetic->left = opr1_node;
-  (*node_d)->arithmetic->left = opr2_node;
+  ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
+  if (node_d == NULL) {
+    perror("Failed to allocate memory for ast_data");
+    exit(EXIT_FAILURE);
+  }
 
+  node_d->arithmetic =
+      (ast_arithmetic_data)malloc(sizeof(struct sAstArithmeticData));
+  if (node_d->arithmetic == NULL) {
+    free(node_d);
+    perror("Failed to allocate memory for ast_arithmetic_data");
+    exit(EXIT_FAILURE);
+  }
+
+  node_d->arithmetic->left = opr1;
+  node_d->arithmetic->right = opr2;
   switch (opt->type) {
   case token_plus:
-    ast_create_node(node, ast_arithmetic_add, *node_d);
+    ast_create_node(node, ast_arithmetic_add, node_d);
     break;
   case token_hyphen:
-    ast_create_node(node, ast_arithmetic_subtract, *node_d);
+    ast_create_node(node, ast_arithmetic_subtract, node_d);
     break;
   case token_asterisk:
-    ast_create_node(node, ast_arithmetic_multiply, *node_d);
+    ast_create_node(node, ast_arithmetic_multiply, node_d);
     break;
   case token_fslash:
-    ast_create_node(node, ast_arithmetic_divide, *node_d);
+    ast_create_node(node, ast_arithmetic_divide, node_d);
     break;
   default:
     // TODO: handle error

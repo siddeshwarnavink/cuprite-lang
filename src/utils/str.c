@@ -25,8 +25,11 @@ void str_create(str *s, const char *val) {
 }
 
 void str_destroy(str *s) {
-  if (*s != NULL) {
-    free((*s)->data);
+  if (s != NULL && *s != NULL) {
+    if ((*s)->data != NULL) {
+      free((*s)->data);
+      (*s)->data = NULL;
+    }
     free(*s);
     *s = NULL;
   }
