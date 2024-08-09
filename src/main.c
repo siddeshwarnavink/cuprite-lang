@@ -9,6 +9,9 @@
 int main() {
   bool running = true;
   char input[50];
+  token_list list;
+  token_list_create(&list);
+
   while (running) {
     printf("cuprite > ");
     if (fgets(input, sizeof(input), stdin) != NULL) {
@@ -21,15 +24,16 @@ int main() {
         printf("bye");
         running = false;
       } else {
-        token_list list;
-        token_list_create(&list);
         parse_line(&list, input);
         ast_parse_tokens(list);
-        token_list_destroy(&list);
+        token_list_clear(&list);
       }
     } else {
       printf("Statement too long\n");
     }
   }
+
+  token_list_destroy(&list);
+
   return 0;
 }

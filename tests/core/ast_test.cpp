@@ -3,8 +3,8 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-#include "../../src/core/ast.h"
-#include "../../src/core/lexer.h"
+#include "core/ast.h"
+#include "core/lexer.h"
 }
 
 TEST(AstTest, TestNode) {
@@ -29,12 +29,17 @@ TEST(AstTest, TestArithmetic) {
   token_list list;
   token_list_create(&list);
 
-  char stm1[] = "1+2*3";
-  parse_line(&list, stm1);
+  const unsigned int STMS_SIZE = 4;
+  char stms[STMS_SIZE][20] = {"1+2*3", "1*2+3", "1+2+3", "1+2*2/3"};
 
-  ast_parse_tokens(list);
+  for (unsigned int i = 0; i < STMS_SIZE; i++) {
+    printf("input: \"%s\"\n", stms[i]);
+    parse_line(&list, stms[i]);
+    ast_parse_tokens(list);
 
-  EXPECT_TRUE(true);
+    EXPECT_TRUE(true);
+    token_list_clear(&list);
+  }
 
   token_list_destroy(&list);
 }

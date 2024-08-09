@@ -25,27 +25,6 @@ void ast_create_node(ast_node *node, ast_node_type type, ast_data data) {
   }
 
   (*node)->type = type;
-
-  switch (type) {
-  case ast_arithmetic_add:
-  case ast_arithmetic_subtract:
-  case ast_arithmetic_multiply:
-  case ast_arithmetic_divide:
-    (*node)->data = malloc(sizeof(struct sAstArithmeticData));
-    break;
-  case ast_val_int:
-    (*node)->data = malloc(sizeof(int));
-    break;
-  case ast_val_float:
-    (*node)->data = malloc(sizeof(float));
-    break;
-  }
-
-  if ((*node)->data == NULL) {
-    perror("Failed to allocate memory for node data");
-    exit(EXIT_FAILURE);
-  }
-
   (*node)->data = data;
 }
 
@@ -54,8 +33,9 @@ void ast_destroy_node(ast_node *node) {
       (*node)->type == ast_arithmetic_subtract ||
       (*node)->type == ast_arithmetic_multiply ||
       (*node)->type == ast_arithmetic_divide) {
-    free((*node)->data->arithmetic->left);
-    free((*node)->data->arithmetic->right);
+    ast_destroy_node(&((*node)->data->arithmetic->left));
+    ast_destroy_node(&((*node)->data->arithmetic->right));
+    free((*node)->data->arithmetic);
   }
   free((*node)->data);
   free(*node);
@@ -103,16 +83,16 @@ void ast_parse_tokens(token_list tokens) {
 
   while (!g_queue_is_empty(operand_stack)) {
     ast_node top = g_queue_pop_tail(operand_stack);
+
     printf("AST: ");
     ast_pp(top);
     printf("\n");
+
+    ast_destroy_node(&top);
   }
 
-  // cleanup
   g_queue_free_full(operand_stack, _operand_stack_cleanup);
   g_queue_free_full(operator_stack, _operator_stack_cleanup);
-
-  //...
 }
 
 void ast_pp(ast_node head) {
@@ -187,7 +167,7 @@ static void _extract_from_token(ast_node *node, token tok) {
   case token_num_float:
     (*node)->type = ast_val_float;
     (*node)->data = (ast_data)malloc(sizeof(float));
-    (*node)->data->val_int = atof(str_val(&(tok->value)));
+    (*node)->data->val_float = atof(str_val(&(tok->value)));
     break;
   default:
     free(*node);
@@ -219,8 +199,8 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
     exit(EXIT_FAILURE);
   }
 
-  node_d->arithmetic->left = opr1;
-  node_d->arithmetic->right = opr2;
+  node_d->arithmetic->left = opr2;
+  node_d->arithmetic->right = opr1;
   switch (opt->type) {
   case token_plus:
     ast_create_node(node, ast_arithmetic_add, node_d);
@@ -238,6 +218,8 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
     // TODO: handle error
     break;
   }
+
+  token_destroy(&opt);
 }
 
 static void _operand_stack_cleanup(void *itm) {

@@ -50,9 +50,7 @@ void token_list_destroy(token_list *list) {
   if (*list != NULL) {
     if ((*list)->tokens != NULL) {
       for (unsigned int i = 0; i < (*list)->size; i++) {
-        str my_str = (*list)->tokens[i]->value;
-        str_destroy(&my_str);
-        free((*list)->tokens[i]);
+        token_destroy(&((*list)->tokens[i]));
       }
       free((*list)->tokens);
     }
@@ -107,51 +105,6 @@ void token_create(token *token, token_type type, char *value) {
 void token_pp(token token) {
   printf("Token(type:\"%s\", value: \"%s\")\n", _get_token_label(token->type),
          token->value != NULL ? str_val(&(token->value)) : "<NULL>");
-}
-
-void token_stack_create(token_stack *stack, token data) {
-  *stack = malloc(sizeof(struct sToken_stack));
-  if (*stack == NULL) {
-    perror("Failed to allocate memory for token stack");
-    exit(EXIT_FAILURE);
-  }
-
-  (*stack)->data = malloc(sizeof(struct sToken));
-  if ((*stack)->data == NULL) {
-    perror("Failed to allocate memory for token stack");
-    exit(EXIT_FAILURE);
-  }
-  (*stack)->data = data;
-}
-
-void token_stack_push(token_stack *stack, token data) {
-  token_stack node;
-  token_stack_create(&node, data);
-  node->next = *stack;
-  *stack = node;
-}
-
-bool token_stack_empty(token_stack *stack) { return !*stack; }
-
-token token_stack_pop(token_stack *stack) {
-  if (token_stack_empty(stack)) {
-    perror("Token stack underflow");
-    exit(EXIT_FAILURE);
-  }
-
-  token_stack temp = *stack;
-  *stack = (*stack)->next;
-  token popped = temp->data;
-  free(temp);
-  return popped;
-}
-
-token token_stack_top(token_stack *stack) {
-  if (token_stack_empty(stack)) {
-    perror("Token stack underflow");
-    exit(EXIT_FAILURE);
-  }
-  return (*stack)->data;
 }
 
 void token_destroy(token *token) {
