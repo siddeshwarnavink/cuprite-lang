@@ -12,6 +12,7 @@
 typedef enum {
   token_num_int,
   token_num_float,
+  token_str,
   token_identf, /**< Variables, function name  */
   token_plus,
   token_hyphen,

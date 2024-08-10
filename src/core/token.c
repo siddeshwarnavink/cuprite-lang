@@ -110,6 +110,8 @@ static const char *_get_token_label(token_type type) {
     return "INT";
   case token_num_float:
     return "FLOAT";
+  case token_str:
+    return "STRING";
   case token_oparentheses:
     return "(";
   case token_cparentheses:
@@ -140,6 +142,7 @@ static bool _has_data(token_type type) {
   case token_num_int:
   case token_num_float:
   case token_identf:
+  case token_str:
     return true;
   default:
     return false;

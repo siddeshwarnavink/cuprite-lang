@@ -14,7 +14,8 @@ typedef enum {
   ast_arithmetic_multiply,
   ast_arithmetic_divide,
   ast_val_int,
-  ast_val_float
+  ast_val_float,
+  ast_str
 } ast_node_type;
 
 typedef struct sAstNode *ast_node;
@@ -34,6 +35,7 @@ typedef union uAstData {
   ast_arithmetic_data arithmetic;
   int val_int;
   float val_float;
+  str val_str;
 } *ast_data;
 
 typedef struct sAstNode {

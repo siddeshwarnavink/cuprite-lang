@@ -11,6 +11,9 @@ CMakeFiles/
 cmake_install.cmake
 CTestTestfile.cmake
 Makefile
+.cache/
+compile_commands.json
+vgcore.*
 
 # Ignore Testing directory created by CMake
 Testing/

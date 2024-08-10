@@ -11,6 +11,7 @@ static bool _is_whitespace(char ch);
 static bool _is_number(char ch);
 static bool _is_operator(char ch);
 static token_type _number_type(char *num);
+static void _remove_first_char(char *str);
 
 void parse_line(token_list *list, char *line) {
   unsigned int line_size = strlen(line);
@@ -20,10 +21,11 @@ void parse_line(token_list *list, char *line) {
 
   bool reading_num = false;
   bool reading_idetf = false;
+  bool reading_str = false;
 
   for (unsigned int i = 0; i < line_size; i++) {
     char ch = line[i];
-    if (_is_whitespace(ch)) {
+    if (!reading_str && _is_whitespace(ch)) {
       continue;
     }
 
@@ -31,7 +33,7 @@ void parse_line(token_list *list, char *line) {
     token tok = NULL;
 
     // Reading number
-    if ((_is_number(ch) || reading_num) && !reading_idetf) {
+    if ((_is_number(ch) || reading_num) && !reading_idetf && !reading_str) {
       reading_num = true;
       if ((i + 1 < line_size && !_is_number(line[i + 1])) ||
           (reading_num && i + 1 == line_size)) {
@@ -47,7 +49,7 @@ void parse_line(token_list *list, char *line) {
     }
 
     // Reading operators
-    if (_is_operator(ch)) {
+    if (_is_operator(ch) && !reading_str) {
       switch (ch) {
       case '(':
         token_create(&tok, token_oparentheses, NULL);
@@ -83,13 +85,30 @@ void parse_line(token_list *list, char *line) {
       continue;
     }
     // Read identifiers
-    if ((!_is_number(ch) && !_is_operator(ch)) || reading_idetf) {
+    if ((!_is_number(ch) && !_is_operator(ch) && ch != '"' && !reading_str) ||
+        reading_idetf) {
       reading_idetf = true;
       if ((i + 1 < line_size && _is_operator(line[i + 1])) ||
           (reading_idetf && i + 1 == line_size)) {
         char *idetf_str = str_val(&tok_str);
         token_create(&tok, token_identf, idetf_str);
         reading_idetf = false;
+
+        token_list_append(list, &tok);
+        str_clear(&tok_str);
+      }
+      continue;
+    }
+
+    // Reading string
+    if (ch == '"' || reading_str) {
+      reading_str = true;
+      if ((i + 1 < line_size && line[i + 1] == '"') ||
+          (reading_idetf && i + 1 == line_size)) {
+        char *str_str = str_val(&tok_str);
+        _remove_first_char(str_str);
+        token_create(&tok, token_str, str_str);
+        reading_str = false;
 
         token_list_append(list, &tok);
         str_clear(&tok_str);
@@ -134,4 +153,13 @@ static token_type _number_type(char *num) {
     return token_num_float;
   }
   return token_num_int;
+}
+
+static void _remove_first_char(char *str) {
+  if (str != NULL && strlen(str) > 0) {
+    // Shift all characters to the left by one
+    for (int i = 0; str[i] != '\0'; i++) {
+      str[i] = str[i + 1];
+    }
+  }
 }

@@ -41,6 +41,8 @@ void ast_destroy_node(ast_node *node) {
     str_destroy(&((*node)->data->var_declare->name));
     ast_destroy_node(&((*node)->data->var_declare->value));
     free((*node)->data->var_declare);
+  } else if ((*node)->type == ast_str) {
+    str_destroy(&((*node)->data->val_str));
   }
   free((*node)->data);
   free(*node);
@@ -143,6 +145,20 @@ ast_node ast_parse_expression(token_list tokens) {
   for (unsigned int i = 0; i < tokens->size; i++) {
     token tok = tokens->tokens[i];
 
+    if (tok->type == token_str) {
+      ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
+      if (node_d == NULL) {
+        perror("Failed to allocate memory for ast_data");
+        exit(EXIT_FAILURE);
+      }
+      str_create(&node_d->val_str, str_val(&tok->value));
+
+      ast_node node;
+      ast_create_node(&node, ast_str, node_d);
+      g_queue_push_tail(operand_stack, node);
+      continue;
+    }
+
     if (tok->type == token_oparentheses) {
       token tok_cp = token_cpy(tokens->tokens[i]);
       g_queue_push_tail(operator_stack, tok_cp);
@@ -206,6 +222,9 @@ void ast_pp(ast_node head) {
     printf("(declare %s ", str_val(&(head->data->var_declare->name)));
     ast_pp(head->data->var_declare->value);
     printf(")");
+    break;
+  case ast_str:
+    printf("\"%s\"", str_val(&head->data->val_str));
     break;
   case ast_val_int:
     printf("%d", head->data->val_int);
