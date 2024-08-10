@@ -8,6 +8,7 @@
  */
 
 typedef enum {
+  ast_declare,
   ast_arithmetic_add,
   ast_arithmetic_subtract,
   ast_arithmetic_multiply,
@@ -18,12 +19,18 @@ typedef enum {
 
 typedef struct sAstNode *ast_node;
 
+typedef struct sAstVarDeclare {
+  str name;
+  ast_node value;
+} *ast_var_declare;
+
 typedef struct sAstArithmeticData {
   ast_node left;
   ast_node right;
 } *ast_arithmetic_data;
 
 typedef union uAstData {
+  ast_var_declare var_declare;
   ast_arithmetic_data arithmetic;
   int val_int;
   float val_float;
@@ -47,6 +54,18 @@ void ast_create_node(ast_node *node, ast_node_type type, ast_data data);
  * @param node Node.
  */
 void ast_destroy_node(ast_node *node);
+
+/**
+ * @brief Parse variable declaration
+ * @param tokens Tokens list.
+ */
+ast_node ast_parse_variable_declaration(token_list tokens);
+
+/**
+ * @brief Parse expression
+ * @param tokens Tokens list.
+ */
+ast_node ast_parse_expression(token_list tokens);
 
 /**
  * @brief Parse tokens to create AST.

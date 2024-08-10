@@ -104,6 +104,8 @@ token token_cpy(token tok) {
 
 static const char *_get_token_label(token_type type) {
   switch (type) {
+  case token_identf:
+    return "IDENTIFIER";
   case token_num_int:
     return "INT";
   case token_num_float:
@@ -124,6 +126,8 @@ static const char *_get_token_label(token_type type) {
     return "%";
   case token_equal:
     return "=";
+  case token_eos:
+    return "EoS";
   case token_eof:
     return "EoF";
   default:
@@ -135,6 +139,7 @@ static bool _has_data(token_type type) {
   switch (type) {
   case token_num_int:
   case token_num_float:
+  case token_identf:
     return true;
   default:
     return false;

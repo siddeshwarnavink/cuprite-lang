@@ -8,6 +8,7 @@
 #include "token.h"
 #include "utils/str.h"
 
+static bool _variable_declaration(token_list list);
 static bool _operator_token(token tok);
 static int _arithmetic_operator_precedence(token_type type);
 static void _extract_from_token(ast_node *node, token tok);
@@ -36,6 +37,10 @@ void ast_destroy_node(ast_node *node) {
     ast_destroy_node(&((*node)->data->arithmetic->left));
     ast_destroy_node(&((*node)->data->arithmetic->right));
     free((*node)->data->arithmetic);
+  } else if ((*node)->type == ast_declare) {
+    str_destroy(&((*node)->data->var_declare->name));
+    ast_destroy_node(&((*node)->data->var_declare->value));
+    free((*node)->data->var_declare);
   }
   free((*node)->data);
   free(*node);
@@ -48,6 +53,91 @@ void ast_parse_tokens(token_list tokens) {
     exit(EXIT_FAILURE);
   }
 
+  GList *nodes = NULL;
+  token_list line_tokens;
+  token_list_create(&line_tokens);
+
+  for (unsigned int i = 0; i < tokens->size; i++) {
+    token tok = tokens->tokens[i];
+    if (tok->type == token_eos || tok->type == token_eof) {
+      // determine the synatx of line
+      // variable declaration
+      if (_variable_declaration(line_tokens)) {
+        ast_node node = ast_parse_variable_declaration(line_tokens);
+        if (node != NULL) {
+          nodes = g_list_append(nodes, node);
+        }
+      }
+      // expression
+      else {
+        ast_node node = ast_parse_expression(line_tokens);
+        if (node != NULL) {
+          nodes = g_list_append(nodes, node);
+        }
+      }
+
+      token_list_clear(&line_tokens);
+    } else {
+      token my_tok = token_cpy(tok);
+      token_list_append(&line_tokens, &my_tok);
+    }
+  }
+
+  if (nodes != NULL) {
+    GList *iter;
+    for (iter = nodes; iter != NULL; iter = iter->next) {
+      ast_node node = (ast_node)iter->data;
+      printf("AST: ");
+      ast_pp(node);
+      printf("\n");
+      ast_destroy_node(&node);
+    }
+    g_list_free(nodes);
+  }
+
+  token_list_destroy(&line_tokens);
+}
+
+ast_node ast_parse_variable_declaration(token_list tokens) {
+  // build variable value tokens list
+  token_list expression_toks;
+  token_list_clear(&expression_toks);
+
+  for (unsigned int i = 2; i < tokens->size; i++) {
+    token my_tok = token_cpy(tokens->tokens[i]);
+    token_list_append(&expression_toks, &my_tok);
+  }
+
+  ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
+  if (node_d == NULL) {
+    perror("Failed to allocate memory for ast_data");
+    exit(EXIT_FAILURE);
+  }
+
+  node_d->var_declare = (ast_var_declare)malloc(sizeof(struct sAstVarDeclare));
+  if (node_d->var_declare == NULL) {
+    free(node_d);
+    perror("Failed to allocate memory for ast_var_declare_data");
+    exit(EXIT_FAILURE);
+  }
+  str_create(&(node_d->var_declare->name),
+             str_val(&(tokens->tokens[0]->value)));
+  node_d->var_declare->value = ast_parse_expression(expression_toks);
+
+  ast_node node;
+  ast_create_node(&node, ast_declare, node_d);
+
+  token_list_destroy(&expression_toks);
+  return node;
+}
+
+ast_node ast_parse_expression(token_list tokens) {
+  if (tokens == NULL) {
+    perror("No tokens to parse");
+    exit(EXIT_FAILURE);
+  }
+
+  ast_node head;
   GQueue *operator_stack = g_queue_new(), *operand_stack = g_queue_new();
 
   for (unsigned int i = 0; i < tokens->size; i++) {
@@ -99,24 +189,24 @@ void ast_parse_tokens(token_list tokens) {
     g_queue_push_tail(operand_stack, node);
   }
 
-  while (!g_queue_is_empty(operand_stack)) {
-    ast_node top = g_queue_pop_tail(operand_stack);
-
-    printf("AST: ");
-    ast_pp(top);
-    printf("\n");
-
-    ast_destroy_node(&top);
+  if (!g_queue_is_empty(operand_stack)) {
+    head = g_queue_pop_tail(operand_stack);
   }
 
   // TODO: Check the operator_stack is empty, if not throw error
 
   g_queue_free_full(operand_stack, _operand_stack_cleanup);
   g_queue_free_full(operator_stack, _operator_stack_cleanup);
+  return head;
 }
 
 void ast_pp(ast_node head) {
   switch (head->type) {
+  case ast_declare:
+    printf("(declare %s ", str_val(&(head->data->var_declare->name)));
+    ast_pp(head->data->var_declare->value);
+    printf(")");
+    break;
   case ast_val_int:
     printf("%d", head->data->val_int);
     break;
@@ -143,9 +233,14 @@ void ast_pp(ast_node head) {
 static void _arithmetic_pp(char *label, ast_node node) {
   printf("(%s ", label);
   ast_pp(node->data->arithmetic->left);
-  printf(", ");
+  printf(" ");
   ast_pp(node->data->arithmetic->right);
   printf(")");
+}
+
+static bool _variable_declaration(token_list list) {
+  return list->size >= 3 && list->tokens[0]->type == token_identf &&
+         list->tokens[1]->type == token_equal;
 }
 
 static bool _operator_token(token tok) {

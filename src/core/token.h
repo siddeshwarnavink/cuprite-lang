@@ -12,6 +12,7 @@
 typedef enum {
   token_num_int,
   token_num_float,
+  token_identf, /**< Variables, function name  */
   token_plus,
   token_hyphen,
   token_asterisk,
@@ -20,7 +21,8 @@ typedef enum {
   token_oparentheses, /**< Open parentheses  */
   token_cparentheses, /**< Close parentheses  */
   token_equal,
-  token_eof
+  token_eos, /**< End of statement  */
+  token_eof  /**< End of line  */
 } token_type;
 
 typedef struct sToken {

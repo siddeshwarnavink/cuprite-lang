@@ -25,6 +25,14 @@ int main() {
         running = false;
       } else {
         parse_line(&list, input);
+        token eos_tok;
+        token_create(&eos_tok, token_eos, NULL);
+        token_list_append(&list, &eos_tok);
+
+        for (unsigned int i = 0; i < list->size; i++) {
+          token_pp(list->tokens[i]);
+        }
+
         ast_parse_tokens(list);
         token_list_clear(&list);
       }
