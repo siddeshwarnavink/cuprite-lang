@@ -53,8 +53,25 @@ void ast_parse_tokens(token_list tokens) {
   for (unsigned int i = 0; i < tokens->size; i++) {
     token tok = tokens->tokens[i];
 
+    if (tok->type == token_oparentheses) {
+      token tok_cp = token_cpy(tokens->tokens[i]);
+      g_queue_push_tail(operator_stack, tok_cp);
+      continue;
+    } else if (tok->type == token_cparentheses) {
+      token top;
+      while ((top = (token)g_queue_peek_tail(operator_stack)) != NULL &&
+             top->type != token_oparentheses) {
+        ast_node node;
+        _make_arithmetic_node(&node, operator_stack, operand_stack);
+        g_queue_push_tail(operand_stack, node);
+      }
+      token opara_tok = g_queue_pop_tail(operator_stack);
+      token_destroy(&opara_tok);
+      continue;
+    }
+
     // check if operand
-    if (!_operator_token(tok)) {
+    else if (!_operator_token(tok)) {
       ast_node node;
       _extract_from_token(&node, tok);
       g_queue_push_tail(operand_stack, node);
@@ -91,6 +108,8 @@ void ast_parse_tokens(token_list tokens) {
 
     ast_destroy_node(&top);
   }
+
+  // TODO: Check the operator_stack is empty, if not throw error
 
   g_queue_free_full(operand_stack, _operand_stack_cleanup);
   g_queue_free_full(operator_stack, _operator_stack_cleanup);
@@ -140,13 +159,13 @@ static int _arithmetic_operator_precedence(token_type type) {
   case token_fslash:
     return 1;
   case token_asterisk:
-    return 2;
+    return 1;
   case token_percent:
-    return 3;
+    return 2;
   case token_plus:
-    return 4;
+    return 3;
   case token_hyphen:
-    return 5;
+    return 4;
   default:
     return 69;
   }

@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-#include "../../src/core/lexer.h"
+#include "core/lexer.h"
 }
 
 TEST(LexerTest, TestArithmetic) {

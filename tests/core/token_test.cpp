@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-#include "../../src/core/token.h"
+#include "core/token.h"
 }
 
 TEST(TokenTest, TestTokenList) {
@@ -39,4 +39,6 @@ TEST(TokenTest, TestTokenListClear) {
 
   EXPECT_EQ(list->size, 1);
   EXPECT_STREQ(list->tokens[0]->value->data, "420");
+
+  token_list_destroy(&list);
 }

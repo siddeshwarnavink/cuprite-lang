@@ -42,8 +42,7 @@ unsigned int str_size(str *s) { return (*s)->size; }
 
 void str_append(str *s, const char *val) {
   unsigned int val_len = strlen(val);
-
-  char *new_data = realloc((*s)->data, (*s)->size + val_len * sizeof(char));
+  char *new_data = realloc((*s)->data, (*s)->size + val_len + 1);
   if (new_data == NULL) {
     perror("Failed to allocate memory for appending string");
     exit(EXIT_FAILURE);
@@ -67,17 +66,19 @@ void str_append_ch(str *st, char ch) {
 }
 
 void str_clear(str *s) {
-  if ((*s)->data != NULL) {
-    free((*s)->data);
-    (*s)->data = NULL;
-  }
+  if (*s != NULL) {
+    if ((*s)->data != NULL) {
+      free((*s)->data);
+      (*s)->data = NULL;
+    }
 
-  (*s)->data = (char *)malloc(sizeof(char));
-  if ((*s)->data == NULL) {
-    perror("Failed to allocate memory for clearing string");
-    exit(EXIT_FAILURE);
-  }
+    (*s)->data = (char *)malloc(sizeof(char));
+    if ((*s)->data == NULL) {
+      perror("Failed to allocate memory for clearing string");
+      exit(EXIT_FAILURE);
+    }
 
-  (*s)->data[0] = '\0';
-  (*s)->size = 0;
+    (*s)->data[0] = '\0';
+    (*s)->size = 0;
+  }
 }
