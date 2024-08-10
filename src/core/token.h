@@ -76,4 +76,9 @@ void token_destroy(token *token);
  */
 void token_pp(token token);
 
+/**
+ * @brief Copy token
+ * @param list Token pointer.
+ */
+token token_cpy(token token);
 #endif

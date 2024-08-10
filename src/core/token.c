@@ -1,7 +1,12 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "token.h"
+#include "utils/str.h"
+
+static const char *_get_token_label(token_type type);
+static bool _has_data(token_type type);
 
 void token_list_create(token_list *list) {
   *list = malloc(sizeof(struct sToken_list));
@@ -31,32 +36,70 @@ void token_list_append(token_list *list, token *tok) {
 }
 
 void token_list_clear(token_list *list) {
-  for (unsigned int i = 0; i < (*list)->size; i++) {
-    str my_str = (*list)->tokens[i]->value;
-    str_destroy(&my_str);
-    free((*list)->tokens[i]);
-  }
-
-  token *new_tokens = realloc((*list)->tokens, sizeof(token));
-  if (new_tokens == NULL) {
-    perror("Failed to allocate memory for clear token_list");
-    exit(EXIT_FAILURE);
-  }
-  (*list)->tokens = new_tokens;
-  (*list)->size = 0;
+  token_list_destroy(list);
+  token_list_create(list);
 }
 
 void token_list_destroy(token_list *list) {
   if (*list != NULL) {
     if ((*list)->tokens != NULL) {
       for (unsigned int i = 0; i < (*list)->size; i++) {
-        token_destroy(&((*list)->tokens[i]));
+        token tok = (*list)->tokens[i];
+        if (tok != NULL) {
+          if (_has_data(tok->type)) {
+            str my_str = tok->value;
+            str_destroy(&my_str);
+          }
+          free(tok);
+          (*list)->tokens[i] = NULL;
+        }
       }
       free((*list)->tokens);
     }
     free(*list);
     *list = NULL;
   }
+}
+
+void token_create(token *token, token_type type, char *value) {
+  (*token) = malloc(sizeof(struct sToken));
+  if (*token == NULL) {
+    perror("Failed to allocate memory for token");
+    exit(EXIT_FAILURE);
+  }
+
+  (*token)->type = type;
+
+  if (value != NULL && _has_data(type)) {
+    str_create(&((*token)->value), value);
+  } else {
+    (*token)->value = NULL;
+  }
+}
+
+void token_pp(token tok) {
+  if (tok != NULL) {
+    if (_has_data(tok->type)) {
+      printf("Token(type:\"%s\", value: \"%s\")\n", _get_token_label(tok->type),
+             tok->value != NULL ? str_val(&(tok->value)) : "<NULL>");
+    } else {
+      printf("Token(type:\"%s\")\n", _get_token_label(tok->type));
+    }
+  }
+}
+
+void token_destroy(token *token) {
+  str my_str = (*token)->value;
+  str_destroy(&my_str);
+  free(*token);
+  *token = NULL;
+}
+
+token token_cpy(token tok) {
+  token tok_new;
+  token_create(&tok_new, tok->type,
+               _has_data(tok->type) ? str_val(&(tok->value)) : NULL);
+  return tok_new;
 }
 
 static const char *_get_token_label(token_type type) {
@@ -88,28 +131,12 @@ static const char *_get_token_label(token_type type) {
   }
 }
 
-void token_create(token *token, token_type type, char *value) {
-  (*token) = malloc(sizeof(struct sToken));
-  if (*token == NULL) {
-    perror("Failed to allocate memory for token");
-    exit(EXIT_FAILURE);
+static bool _has_data(token_type type) {
+  switch (type) {
+  case token_num_int:
+  case token_num_float:
+    return true;
+  default:
+    return false;
   }
-
-  (*token)->type = type;
-
-  if (value != NULL) {
-    str_create(&((*token)->value), value);
-  }
-}
-
-void token_pp(token token) {
-  printf("Token(type:\"%s\", value: \"%s\")\n", _get_token_label(token->type),
-         token->value != NULL ? str_val(&(token->value)) : "<NULL>");
-}
-
-void token_destroy(token *token) {
-  str my_str = (*token)->value;
-  str_destroy(&my_str);
-  free(*token);
-  *token = NULL;
 }

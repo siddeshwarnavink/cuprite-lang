@@ -25,16 +25,17 @@ void str_create(str *s, const char *val) {
 }
 
 void str_destroy(str *s) {
-  if (s != NULL && *s != NULL) {
-    if ((*s)->data != NULL) {
-      free((*s)->data);
-      (*s)->data = NULL;
+  if (s != NULL) {
+    if (*s != NULL) {
+      if ((*s)->data != NULL) {
+        free((*s)->data);
+        (*s)->data = NULL;
+      }
+      free(*s);
+      *s = NULL;
     }
-    free(*s);
-    *s = NULL;
   }
 }
-
 char *str_val(str *s) { return (*s)->data; }
 
 unsigned int str_size(str *s) { return (*s)->size; }
@@ -53,16 +54,16 @@ void str_append(str *s, const char *val) {
   (*s)->size += val_len;
 }
 
-void str_append_ch(str *s, char ch) {
-  char *new_data = realloc((*s)->data, (*s)->size + 1 * sizeof(char));
-  if (new_data == NULL) {
-    perror("Failed to allocate memory for appending character string");
+void str_append_ch(str *st, char ch) {
+  str s = *st;
+  s->data = realloc(s->data, sizeof(char) * (s->size + 2));
+  if (s->data == NULL) {
+    perror("Failed to reallocate memory for string");
     exit(EXIT_FAILURE);
   }
-
-  (*s)->data = new_data;
-  (*s)->data[(*s)->size] = ch;
-  (*s)->data[++(*s)->size] = '\0';
+  s->data[s->size] = ch;
+  s->size++;
+  s->data[s->size] = '\0';
 }
 
 void str_clear(str *s) {

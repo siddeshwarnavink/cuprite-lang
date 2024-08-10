@@ -71,7 +71,6 @@ void parse_line(token_list *list, char *line) {
     }
 
     if (tok != NULL) {
-      token_pp(tok);
       token_list_append(list, &tok);
       str_clear(&tok_str);
     }

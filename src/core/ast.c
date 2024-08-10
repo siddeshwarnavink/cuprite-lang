@@ -62,15 +62,16 @@ void ast_parse_tokens(token_list tokens) {
 
     // its operator
     else if (_operator_token(tok)) {
+      token tok_cp = token_cpy(tokens->tokens[i]);
       token top;
       while ((top = (token)g_queue_peek_tail(operator_stack)) != NULL &&
              _arithmetic_operator_precedence(top->type) <=
-                 _arithmetic_operator_precedence(tok->type)) {
+                 _arithmetic_operator_precedence(tok_cp->type)) {
         ast_node node;
         _make_arithmetic_node(&node, operator_stack, operand_stack);
         g_queue_push_tail(operand_stack, node);
       }
-      g_queue_push_tail(operator_stack, tok);
+      g_queue_push_tail(operator_stack, tok_cp);
     }
   }
 
@@ -152,7 +153,8 @@ static int _arithmetic_operator_precedence(token_type type) {
 }
 
 static void _extract_from_token(ast_node *node, token tok) {
-  *node = malloc(sizeof(ast_node));
+  *node = malloc(sizeof(struct sAstNode));
+
   if (*node == NULL) {
     perror("Failed to allocate memory for node");
     exit(EXIT_FAILURE);
@@ -162,11 +164,21 @@ static void _extract_from_token(ast_node *node, token tok) {
   case token_num_int:
     (*node)->type = ast_val_int;
     (*node)->data = (ast_data)malloc(sizeof(int));
+    if ((*node)->data == NULL) {
+      perror("Failed to allocate memory for node data");
+      free(*node);
+      exit(EXIT_FAILURE);
+    }
     (*node)->data->val_int = atoi(str_val(&(tok->value)));
     break;
   case token_num_float:
     (*node)->type = ast_val_float;
     (*node)->data = (ast_data)malloc(sizeof(float));
+    if ((*node)->data == NULL) {
+      perror("Failed to allocate memory for node data");
+      free(*node);
+      exit(EXIT_FAILURE);
+    }
     (*node)->data->val_float = atof(str_val(&(tok->value)));
     break;
   default:
