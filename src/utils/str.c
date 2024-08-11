@@ -24,6 +24,26 @@ void str_create(str *s, const char *val) {
   (*s)->size = val_len;
 }
 
+void str_cpy(str *s, str *val) {
+  *s = (str)malloc(sizeof(struct sStr));
+  if (*s == NULL) {
+    perror("Failed to allocate memory for string");
+    exit(EXIT_FAILURE);
+  }
+
+  unsigned int val_len = strlen((*val)->data);
+
+  (*s)->data = (char *)malloc(sizeof(char) * (val_len + 1));
+  if ((*s)->data == NULL) {
+    perror("Failed to allocate memory for string");
+    free(*s);
+    exit(EXIT_FAILURE);
+  }
+
+  strcpy((*s)->data, (*val)->data);
+  (*s)->size = val_len;
+}
+
 void str_destroy(str *s) {
   if (s != NULL) {
     if (*s != NULL) {

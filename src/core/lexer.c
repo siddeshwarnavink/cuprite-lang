@@ -84,11 +84,13 @@ void parse_line(token_list *list, char *line) {
       str_clear(&tok_str);
       continue;
     }
+
     // Read identifiers
     if ((!_is_number(ch) && !_is_operator(ch) && ch != '"' && !reading_str) ||
         reading_idetf) {
       reading_idetf = true;
       if ((i + 1 < line_size && _is_operator(line[i + 1])) ||
+          (i + 1 < line_size && _is_whitespace(line[i + 1])) ||
           (reading_idetf && i + 1 == line_size)) {
         char *idetf_str = str_val(&tok_str);
         token_create(&tok, token_identf, idetf_str);

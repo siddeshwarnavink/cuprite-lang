@@ -19,6 +19,13 @@ typedef struct sStr {
 void str_create(str *s, const char *val);
 
 /**
+ * @brief Creates a new copy string
+ * @param s String pointer.
+ * @param val String pointer of value.
+ */
+void str_cpy(str *s, str *val);
+
+/**
  * @brief Destroys a string.
  * @param s String pointer.
  */

@@ -3,6 +3,7 @@
 
 extern "C" {
 #include "core/lexer.h"
+#include "core/token.h"
 }
 
 TEST(LexerTest, TestArithmetic) {
@@ -45,6 +46,33 @@ TEST(LexerTest, TestArithmetic) {
   EXPECT_EQ(list->tokens[5]->type, token_fslash);
   EXPECT_STREQ(str_val(&(list->tokens[6]->value)), "4");
   EXPECT_EQ(list->tokens[6]->type, token_num_int);
+
+  token_list_destroy(&list);
+}
+
+TEST(LexerTest, TestDeclarataion) {
+  token_list list;
+  token_list_create(&list);
+
+  char stm1[] = "\ta = 10";
+  parse_line(&list, stm1);
+  EXPECT_EQ(list->size, 3);
+  EXPECT_EQ(list->tokens[0]->type, token_identf);
+  EXPECT_STREQ(str_val(&(list->tokens[0]->value)), "a");
+  EXPECT_EQ(list->tokens[1]->type, token_equal);
+  EXPECT_EQ(list->tokens[2]->type, token_num_int);
+  EXPECT_STREQ(str_val(&(list->tokens[2]->value)), "10");
+  token_list_clear(&list);
+
+  char stm2[] = "\tname = \"Siddeshwar\"";
+  parse_line(&list, stm2);
+  EXPECT_EQ(list->size, 3);
+  EXPECT_EQ(list->tokens[0]->type, token_identf);
+  EXPECT_STREQ(str_val(&(list->tokens[0]->value)), "name");
+  EXPECT_EQ(list->tokens[1]->type, token_equal);
+  EXPECT_EQ(list->tokens[2]->type, token_str);
+  EXPECT_STREQ(str_val(&(list->tokens[2]->value)), "Siddeshwar");
+  token_list_clear(&list);
 
   token_list_destroy(&list);
 }
