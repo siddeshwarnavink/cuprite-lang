@@ -6,6 +6,7 @@
 
 #include "ast.h"
 #include "token.h"
+#include "utils/err.h"
 #include "utils/str.h"
 
 static bool _variable_declaration(token_list list);
@@ -51,8 +52,7 @@ void ast_destroy_node(ast_node *node) {
 
 void ast_parse_tokens(token_list tokens) {
   if (tokens == NULL) {
-    perror("No tokens to parse");
-    exit(EXIT_FAILURE);
+    err_throw(err_error, "No tokens passed.");
   }
 
   GList *nodes = NULL;
