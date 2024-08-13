@@ -59,8 +59,10 @@ void ast_parse_tokens(token_list tokens) {
   token_list line_tokens;
   token_list_create(&line_tokens);
 
-  for (unsigned int i = 0; i < tokens->size; i++) {
-    token tok = tokens->tokens[i];
+  GList *token_iter;
+  for (token_iter = tokens->tokens; token_iter != NULL;
+       token_iter = token_iter->next) {
+    token tok = (token)token_iter->data;
     if (tok->type == token_eos || tok->type == token_eof) {
       // determine the synatx of line
       // variable declaration
@@ -105,9 +107,13 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
   token_list expression_toks;
   token_list_clear(&expression_toks);
 
-  for (unsigned int i = 2; i < tokens->size; i++) {
-    token my_tok = token_cpy(tokens->tokens[i]);
-    token_list_append(&expression_toks, &my_tok);
+  GList *iter = tokens->tokens;
+  iter = iter->next;
+  iter = iter->next;
+  for (; iter != NULL; iter = iter->next) {
+    token tok = (token)iter->data;
+    token tok_cp = token_cpy(tok);
+    token_list_append(&expression_toks, &tok_cp);
   }
 
   ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
@@ -122,8 +128,9 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
     perror("Failed to allocate memory for ast_var_declare_data");
     exit(EXIT_FAILURE);
   }
-  str_create(&(node_d->var_declare->name),
-             str_val(&(tokens->tokens[0]->value)));
+
+  token identf_tok = (token)g_list_first(tokens->tokens);
+  str_create(&(node_d->var_declare->name), str_val(&(identf_tok->value)));
   node_d->var_declare->value = ast_parse_expression(expression_toks);
 
   ast_node node;
@@ -142,8 +149,9 @@ ast_node ast_parse_expression(token_list tokens) {
   ast_node head;
   GQueue *operator_stack = g_queue_new(), *operand_stack = g_queue_new();
 
-  for (unsigned int i = 0; i < tokens->size; i++) {
-    token tok = tokens->tokens[i];
+  GList *iter;
+  for (iter = tokens->tokens; iter != NULL; iter = iter->next) {
+    token tok = (token)iter->data;
 
     if (tok->type == token_str) {
       ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
@@ -160,7 +168,7 @@ ast_node ast_parse_expression(token_list tokens) {
     }
 
     if (tok->type == token_oparentheses) {
-      token tok_cp = token_cpy(tokens->tokens[i]);
+      token tok_cp = token_cpy(tok);
       g_queue_push_tail(operator_stack, tok_cp);
       continue;
     } else if (tok->type == token_cparentheses) {
@@ -185,7 +193,7 @@ ast_node ast_parse_expression(token_list tokens) {
 
     // its operator
     else if (_operator_token(tok)) {
-      token tok_cp = token_cpy(tokens->tokens[i]);
+      token tok_cp = token_cpy(tok);
       token top;
       while ((top = (token)g_queue_peek_tail(operator_stack)) != NULL &&
              _arithmetic_operator_precedence(top->type) <=
@@ -258,8 +266,11 @@ static void _arithmetic_pp(char *label, ast_node node) {
 }
 
 static bool _variable_declaration(token_list list) {
-  return list->size >= 3 && list->tokens[0]->type == token_identf &&
-         list->tokens[1]->type == token_equal;
+  token first_tok = (token)g_list_first(list->tokens);
+  token second_tok = (token)g_list_nth(list->tokens, 2);
+
+  return list->size >= 3 && first_tok->type == token_identf &&
+         second_tok->type == token_equal;
 }
 
 static bool _operator_token(token tok) {
@@ -369,10 +380,14 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
 
 static void _operand_stack_cleanup(void *itm) {
   ast_node node = itm;
-  ast_destroy_node(&node);
+  if (node != NULL) {
+    ast_destroy_node(&node);
+  }
 }
 
 static void _operator_stack_cleanup(void *itm) {
   token tok = itm;
-  token_destroy(&tok);
+  if (tok != NULL) {
+    token_destroy(&tok);
+  }
 }

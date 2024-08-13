@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "glib.h"
 #include "token.h"
 #include "utils/str.h"
 
@@ -19,19 +20,7 @@ void token_list_create(token_list *list) {
 }
 
 void token_list_append(token_list *list, token *tok) {
-  if ((*list)->tokens == NULL) {
-    (*list)->tokens = malloc(sizeof(token));
-  } else {
-    token *new_tokens =
-        realloc((*list)->tokens, ((*list)->size + 1) * sizeof(token));
-    if (new_tokens == NULL) {
-      perror("Failed to allocate memory for append token_list");
-      exit(EXIT_FAILURE);
-    }
-    (*list)->tokens = new_tokens;
-  }
-
-  (*list)->tokens[(*list)->size] = *tok;
+  (*list)->tokens = g_list_append((*list)->tokens, *tok);
   (*list)->size++;
 }
 
@@ -43,18 +32,12 @@ void token_list_clear(token_list *list) {
 void token_list_destroy(token_list *list) {
   if (*list != NULL) {
     if ((*list)->tokens != NULL) {
-      for (unsigned int i = 0; i < (*list)->size; i++) {
-        token tok = (*list)->tokens[i];
-        if (tok != NULL) {
-          if (_has_data(tok->type)) {
-            str my_str = tok->value;
-            str_destroy(&my_str);
-          }
-          free(tok);
-          (*list)->tokens[i] = NULL;
-        }
+      GList *iter;
+      for (iter = (*list)->tokens; iter != NULL; iter = iter->next) {
+        token tok = (token)iter->data;
+        token_destroy(&tok);
       }
-      free((*list)->tokens);
+      g_list_free((*list)->tokens);
     }
     free(*list);
     *list = NULL;

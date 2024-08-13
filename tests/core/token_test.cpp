@@ -4,6 +4,8 @@ extern "C" {
 #include "core/token.h"
 }
 
+#include "../helpers/token_list_helpers.h"
+
 TEST(TokenTest, TestTokenList) {
   token_list list;
   token_list_create(&list);
@@ -11,12 +13,12 @@ TEST(TokenTest, TestTokenList) {
   token tok1;
   token_create(&tok1, token_num_int, "69");
   token_list_append(&list, &tok1);
-  EXPECT_STREQ(list->tokens[0]->value->data, "69");
+  check_token_list(&list, 1, token_num_int, "69");
 
   token tok2;
   token_create(&tok2, token_num_int, "420");
   token_list_append(&list, &tok2);
-  EXPECT_STREQ(list->tokens[1]->value->data, "420");
+  check_token_list(&list, 2, token_num_int, "420");
 
   token_list_destroy(&list);
 
@@ -38,7 +40,7 @@ TEST(TokenTest, TestTokenListClear) {
   token_list_append(&list, &tok2);
 
   EXPECT_EQ(list->size, 1);
-  EXPECT_STREQ(list->tokens[0]->value->data, "420");
+  check_token_list(&list, 1, token_num_int, "420");
 
   token_list_destroy(&list);
 }

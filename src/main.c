@@ -34,8 +34,10 @@ int main() {
           token_create(&eos_tok, token_eos, NULL);
           token_list_append(&list, &eos_tok);
 
-          for (unsigned int i = 0; i < list->size; i++) {
-            token_pp(list->tokens[i]);
+          GList *iter;
+          for (iter = list->tokens; iter != NULL; iter = iter->next) {
+            token tok = (token)iter->data;
+            token_pp(tok);
           }
 
           ast_parse_tokens(list);

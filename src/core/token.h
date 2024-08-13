@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
-#include "../utils/str.h"
+#include <glib.h>
+
+#include "utils/str.h"
 
 /**
  * @file token.h
@@ -32,7 +34,7 @@ typedef struct sToken {
 } *token;
 
 typedef struct sToken_list {
-  token *tokens;     /**< Array of tokens  */
+  GList *tokens;     /**< List of tokens  */
   unsigned int size; /**< Size of array  */
 } *token_list;
 
