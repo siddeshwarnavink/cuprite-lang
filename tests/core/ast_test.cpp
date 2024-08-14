@@ -122,6 +122,7 @@ TEST(AstTest, TestVariableDeclaration) {
 
   char stm1[] = "a = 69.420";
   parse_line(&list, stm1);
+
   node = ast_parse_variable_declaration(list);
   ast_pp(node);
   EXPECT_EQ(node->type, ast_declare);

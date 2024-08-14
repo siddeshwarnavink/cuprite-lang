@@ -17,9 +17,10 @@ TEST(LexerTest, TestArithmetic) {
   char stm1[] = "\t1 +2 + 3";
   parse_line(&list, stm1);
 
+  token_list_pp(list);
+
   EXPECT_EQ(list->size, 5);
 
-  token first = (token)g_list_nth(list->tokens, 1);
   check_token_list(&list, 1, token_num_int, "1");
   check_token_list(&list, 2, token_plus);
   check_token_list(&list, 3, token_num_int, "2");
@@ -31,6 +32,8 @@ TEST(LexerTest, TestArithmetic) {
   char stm2[] = "1.414 * 2.23";
   parse_line(&list, stm2);
 
+  token_list_pp(list);
+
   EXPECT_EQ(list->size, 3);
 
   check_token_list(&list, 1, token_num_float, "1.414");
@@ -41,6 +44,8 @@ TEST(LexerTest, TestArithmetic) {
 
   char stm3[] = "(1.14 + 2.23) / 4";
   parse_line(&list, stm3);
+
+  token_list_pp(list);
 
   EXPECT_EQ(list->size, 7);
 
@@ -62,6 +67,8 @@ TEST(LexerTest, TestDeclarataion) {
   char stm1[] = "\ta = 10";
   parse_line(&list, stm1);
 
+  token_list_pp(list);
+
   EXPECT_EQ(list->size, 3);
 
   check_token_list(&list, 1, token_identf, "a");
@@ -72,6 +79,8 @@ TEST(LexerTest, TestDeclarataion) {
 
   char stm2[] = "\tname = \"Siddeshwar\"";
   parse_line(&list, stm2);
+
+  token_list_pp(list);
 
   EXPECT_EQ(list->size, 3);
 

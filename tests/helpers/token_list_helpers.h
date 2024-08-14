@@ -10,4 +10,6 @@ extern "C" {
 void check_token_list(token_list *list, unsigned int index,
                       token_type expected_type,
                       const char *expected_value = nullptr);
+void token_list_pp(token_list list);
+
 #endif

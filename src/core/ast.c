@@ -129,9 +129,14 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
     exit(EXIT_FAILURE);
   }
 
-  token identf_tok = (token)g_list_first(tokens->tokens);
-  str_create(&(node_d->var_declare->name), str_val(&(identf_tok->value)));
-  node_d->var_declare->value = ast_parse_expression(expression_toks);
+  GList *firstel = g_list_first(tokens->tokens);
+  if (firstel != NULL) {
+    token identf_tok = (token)firstel->data;
+    str_create(&(node_d->var_declare->name), str_val(&(identf_tok->value)));
+    node_d->var_declare->value = ast_parse_expression(expression_toks);
+  } else {
+    // TODO: handle error
+  }
 
   ast_node node;
   ast_create_node(&node, ast_declare, node_d);
@@ -266,11 +271,15 @@ static void _arithmetic_pp(char *label, ast_node node) {
 }
 
 static bool _variable_declaration(token_list list) {
-  token first_tok = (token)g_list_first(list->tokens);
-  token second_tok = (token)g_list_nth(list->tokens, 2);
-
-  return list->size >= 3 && first_tok->type == token_identf &&
-         second_tok->type == token_equal;
+  GList *iter = list->tokens;
+  token first_tok = (token)iter->data;
+  iter = iter->next;
+  token second_tok = (token)iter->data;
+  if (first_tok != NULL && second_tok != NULL) {
+    return list->size >= 3 && first_tok->type == token_identf &&
+           second_tok->type == token_equal;
+  }
+  return false;
 }
 
 static bool _operator_token(token tok) {
