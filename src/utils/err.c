@@ -1,22 +1,33 @@
+#include <complex.h>
 #include <setjmp.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "err.h"
+#include "utils/memstk.h"
+#include "utils/singleton.h"
 
-err myerr;
+SINGLETON(err, err_singleton, {false})
 
 void err_create() {
-  if (!myerr.init) {
-    myerr.type = err_none;
-    setjmp(myerr.buf);
-    myerr.init = true;
+  err *myerr = err_singleton();
+  myerr->type = err_none;
+  setjmp(myerr->buf);
+
+  if (err_occurred()) {
+    memstk_clean();
+    exit(EXIT_FAILURE);
   }
 }
 
-bool err_occurred() { return myerr.type == err_fatal; }
+bool err_occurred() {
+  err *myerr = err_singleton();
+  return myerr->type == err_fatal;
+}
 
 void err_throw(err_type type, char *msg) {
-  myerr.type = type;
+  err *myerr = err_singleton();
+  myerr->type = type;
   switch (type) {
   case err_warning:
     printf("\033[1;33m\uea6c [Error]\033[0m %s\n", msg);
@@ -26,13 +37,9 @@ void err_throw(err_type type, char *msg) {
     break;
   case err_fatal:
     printf("\033[1;31m\uea6c [Fatal error]\033[0m %s\n", msg);
+    longjmp(myerr->buf, 1);
     break;
   default:
     break;
   }
-  if (type == err_fatal) {
-    longjmp(myerr.buf, 1);
-  }
 }
-
-void err_destroy() { myerr.init = false; }

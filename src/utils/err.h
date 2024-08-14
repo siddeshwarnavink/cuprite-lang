@@ -14,7 +14,6 @@ typedef enum { err_none, err_warning, err_error, err_fatal } err_type;
 typedef struct sErr {
   jmp_buf buf;
   err_type type;
-  bool init;
 } err;
 
 /**
@@ -36,11 +35,5 @@ bool err_occurred();
  * @param msg Error message
  */
 void err_throw(err_type type, char *msg);
-
-/**
- * @brief Destroy error instance.
- * @param e err pointer.
- */
-void err_destroy();
 
 #endif
