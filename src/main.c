@@ -6,8 +6,11 @@
 #include "core/lexer.h"
 #include "core/token.h"
 #include "utils/err.h"
+#include "utils/memstk.h"
 
 int main() {
+  memstk_init();
+
   bool running = true;
   char input[50];
   token_list list;
@@ -55,6 +58,7 @@ int main() {
 
   err_destroy();
   token_list_destroy(&list);
+  memstk_clean();
 
   return 0;
 }

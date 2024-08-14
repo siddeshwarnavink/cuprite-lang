@@ -12,7 +12,7 @@ static void _clean_node(void *n);
 
 void memstk_init() {
   memstk *stk = memstk_singleton();
-  printf("stack created\n");
+  printf("stack created %p\n", stk);
   if (stk->resource_stack == NULL) {
     stk->resource_stack = g_queue_new();
   }
@@ -29,11 +29,12 @@ void memstk_push(void **resource, cleanup_func cleanup) {
   node->cleanup = cleanup;
   g_queue_push_tail(stk->resource_stack, node);
 
-  printf("pushed %p to stack\n", resource);
+  printf("pushed %p to stack %p\n", resource, stk);
 }
 
 void memstk_clean() {
   memstk *stk = memstk_singleton();
+  printf("cleaning up stack %p ...\n", stk);
   if (stk->resource_stack != NULL) {
     g_queue_free_full(stk->resource_stack, _clean_node);
     stk->resource_stack = NULL;
