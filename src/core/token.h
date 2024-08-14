@@ -5,6 +5,7 @@
 
 #include <glib.h>
 
+#include "utils/memstk.h"
 #include "utils/str.h"
 
 /**
@@ -31,11 +32,13 @@ typedef enum {
 typedef struct sToken {
   token_type type; /**< Token type  */
   str value;       /**< Token value  */
+  memstk_node *memstk_node;
 } *token;
 
 typedef struct sToken_list {
   GList *tokens;     /**< List of tokens  */
   unsigned int size; /**< Size of array  */
+  memstk_node *memstk_node;
 } *token_list;
 
 /**

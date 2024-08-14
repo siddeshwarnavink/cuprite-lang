@@ -3,6 +3,9 @@
 #include <string.h>
 
 #include "str.h"
+#include "utils/memstk.h"
+
+MEMSTK_CLEANUP(str, str_destroy);
 
 void str_create(str *s, const char *val) {
   *s = (str)malloc(sizeof(struct sStr));
@@ -22,6 +25,7 @@ void str_create(str *s, const char *val) {
 
   strcpy((*s)->data, val);
   (*s)->size = val_len;
+  (*s)->memstk_node = memstk_push((void **)&(*s), _memstk_str_cleanup);
 }
 
 void str_cpy(str *s, str *val) {
@@ -51,6 +55,7 @@ void str_destroy(str *s) {
         free((*s)->data);
         (*s)->data = NULL;
       }
+      (*s)->memstk_node->freed = true;
       free(*s);
       *s = NULL;
     }

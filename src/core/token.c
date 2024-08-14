@@ -4,7 +4,11 @@
 
 #include "glib.h"
 #include "token.h"
+#include "utils/memstk.h"
 #include "utils/str.h"
+
+MEMSTK_CLEANUP(token_list, token_list_destroy);
+MEMSTK_CLEANUP(token, token_destroy);
 
 static const char *_get_token_label(token_type type);
 static bool _has_data(token_type type);
@@ -17,6 +21,8 @@ void token_list_create(token_list *list) {
   }
   (*list)->tokens = NULL;
   (*list)->size = 0;
+  (*list)->memstk_node =
+      memstk_push((void **)&(*list), _memstk_token_list_cleanup);
 }
 
 void token_list_append(token_list *list, token *tok) {
@@ -39,6 +45,7 @@ void token_list_destroy(token_list *list) {
       }
       g_list_free((*list)->tokens);
     }
+    (*list)->memstk_node->freed = true;
     free(*list);
     *list = NULL;
   }
@@ -58,6 +65,8 @@ void token_create(token *token, token_type type, char *value) {
   } else {
     (*token)->value = NULL;
   }
+  (*token)->memstk_node =
+      memstk_push((void **)&(*token), _memstk_token_cleanup);
 }
 
 void token_pp(token tok) {
@@ -74,6 +83,7 @@ void token_pp(token tok) {
 void token_destroy(token *token) {
   str my_str = (*token)->value;
   str_destroy(&my_str);
+  (*token)->memstk_node->freed = true;
   free(*token);
   *token = NULL;
 }

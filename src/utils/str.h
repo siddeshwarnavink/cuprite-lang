@@ -1,6 +1,8 @@
 #ifndef STR_H
 #define STR_H
 
+#include "utils/memstk.h"
+
 /**
  * @file str.h
  * @brief Simple string library.
@@ -9,6 +11,7 @@
 typedef struct sStr {
   char *data;        /**< Actual string  */
   unsigned int size; /**< Length of string */
+  memstk_node *memstk_node;
 } *str;
 
 /**
