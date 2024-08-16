@@ -230,6 +230,42 @@ ast_node ast_parse_expression(token_list tokens) {
         exit(EXIT_FAILURE);
     }
 
+    // Handle non-arithmetic expression
+    if (tokens->size == 1) {
+        token tok = (token)tokens->tokens->data;
+
+        ast_node node = NULL;
+        ast_data node_d;
+
+        switch (tok->type) {
+            case token_str:
+                node_d = (ast_data)malloc(sizeof(union uAstData));
+                str_create(&node_d->val_str, tok->value->data);
+                ast_create_node(&node, ast_str, node_d);
+                break;
+            case token_num_int:
+                node_d = (ast_data)malloc(sizeof(int));
+                node_d->val_int = atoi(tok->value->data);
+                ast_create_node(&node, ast_val_int, node_d);
+                break;
+            case token_num_float:
+                node_d = (ast_data)malloc(sizeof(float));
+                node_d->val_float = atof(tok->value->data);
+                ast_create_node(&node, ast_val_float, node_d);
+                break;
+            default:
+                err_throw(err_error, "Invalid expression");
+                break;
+        }
+
+        if (node_d == NULL) {
+            perror("Failed to allocate memory for ast_data");
+            exit(EXIT_FAILURE);
+        }
+
+        return node;
+    }
+
     ast_node head;
     GQueue *operator_stack = g_queue_new(), *operand_stack = g_queue_new();
 
@@ -297,11 +333,9 @@ ast_node ast_parse_expression(token_list tokens) {
         g_queue_push_tail(operand_stack, node);
     }
 
-    if (!g_queue_is_empty(operand_stack)) {
-        head = g_queue_pop_tail(operand_stack);
-    }
-
     // BUG: Check the operator_stack is empty, if not throw error
+
+    head = g_queue_pop_tail(operand_stack);
 
     g_queue_free_full(operand_stack, _operand_stack_cleanup);
     g_queue_free_full(operator_stack, _operator_stack_cleanup);
@@ -363,6 +397,7 @@ static void _arithmetic_pp(char *label, ast_node node) {
 static bool _variable_declaration(token_list list) {
     GList *iter = list->tokens;
     token first_tok = (token)iter->data;
+    if (!iter->next) return false;
     iter = iter->next;
     token second_tok = (token)iter->data;
     if (first_tok != NULL && second_tok != NULL) {
@@ -494,6 +529,7 @@ static void _operator_stack_cleanup(void *itm) {
 static bool _function_call(token_list list) {
     GList *iter = list->tokens;
     token first_tok = (token)iter->data;
+    if (!iter->next) return false;
     iter = iter->next;
     token second_tok = (token)iter->data;
     if (first_tok != NULL && second_tok != NULL) {
