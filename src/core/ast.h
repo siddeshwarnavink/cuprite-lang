@@ -15,7 +15,8 @@ typedef enum {
   ast_arithmetic_divide,
   ast_val_int,
   ast_val_float,
-  ast_str
+  ast_str,
+  ast_func_call
 } ast_node_type;
 
 typedef struct sAstNode *ast_node;
@@ -25,6 +26,11 @@ typedef struct sAstVarDeclare {
   ast_node value;
 } *ast_var_declare;
 
+typedef struct sAstFCall {
+  str name;
+  GList *args;
+} *ast_fcall;
+
 typedef struct sAstArithmeticData {
   ast_node left;
   ast_node right;
@@ -33,6 +39,7 @@ typedef struct sAstArithmeticData {
 typedef union uAstData {
   ast_var_declare var_declare;
   ast_arithmetic_data arithmetic;
+  ast_fcall fcall;
   int val_int;
   float val_float;
   str val_str;
@@ -62,6 +69,12 @@ void ast_destroy_node(ast_node *node);
  * @param tokens Tokens list.
  */
 ast_node ast_parse_variable_declaration(token_list tokens);
+
+/**
+ * @brief Parse function call
+ * @param tokens Tokens list.
+ */
+ast_node ast_parse_function_call(token_list tokens);
 
 /**
  * @brief Parse expression

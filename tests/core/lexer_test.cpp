@@ -92,3 +92,36 @@ TEST(LexerTest, TestDeclarataion) {
 
   token_list_destroy(&list);
 }
+
+TEST(LexerTest, TestOpratorBetween) {
+  token_list list;
+  token_list_create(&list);
+
+  char stm1[] = "hello,world";
+  parse_line(&list, stm1);
+
+  token_list_pp(list);
+
+  EXPECT_EQ(list->size, 3);
+
+  check_token_list(&list, 1, token_identf, "hello");
+  check_token_list(&list, 2, token_comma);
+  check_token_list(&list, 3, token_identf, "world");
+
+  token_list_clear(&list);
+
+  char stm2[] = "\"hello\",\"world\"";
+  parse_line(&list, stm2);
+
+  token_list_pp(list);
+
+  EXPECT_EQ(list->size, 3);
+
+  check_token_list(&list, 1, token_str, "hello");
+  check_token_list(&list, 2, token_comma);
+  check_token_list(&list, 3, token_str, "world");
+
+  token_list_clear(&list);
+
+  token_list_destroy(&list);
+}

@@ -26,7 +26,8 @@ typedef enum {
   token_cparentheses, /**< Close parentheses  */
   token_equal,
   token_eos, /**< End of statement  */
-  token_eof  /**< End of line  */
+  token_eof, /**< End of line  */
+  token_comma
 } token_type;
 
 typedef struct sToken {

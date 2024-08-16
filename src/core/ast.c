@@ -18,6 +18,7 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
 static void _operand_stack_cleanup(void *itm);
 static void _operator_stack_cleanup(void *itm);
 static void _arithmetic_pp(char *label, ast_node node);
+static bool _function_call(token_list list);
 
 void ast_create_node(ast_node *node, ast_node_type type, ast_data data) {
   (*node) = malloc(sizeof(struct sAstNode));
@@ -44,6 +45,15 @@ void ast_destroy_node(ast_node *node) {
     free((*node)->data->var_declare);
   } else if ((*node)->type == ast_str) {
     str_destroy(&((*node)->data->val_str));
+  } else if ((*node)->type == ast_func_call) {
+    str_destroy(&((*node)->data->fcall->name));
+    GList *iter;
+    for (iter = (*node)->data->fcall->args; iter != NULL; iter = iter->next) {
+      ast_node node = (ast_node)iter->data;
+      ast_destroy_node(&node);
+    }
+    g_list_free((*node)->data->fcall->args);
+    free((*node)->data->fcall);
   }
   free((*node)->data);
   free(*node);
@@ -68,6 +78,15 @@ void ast_parse_tokens(token_list tokens) {
       // variable declaration
       if (_variable_declaration(line_tokens)) {
         ast_node node = ast_parse_variable_declaration(line_tokens);
+        if (node != NULL) {
+          nodes = g_list_append(nodes, node);
+        }
+      }
+      // function call
+      else if (_function_call(line_tokens)) {
+        token my_tok = token_cpy(tok);
+        token_list_append(&line_tokens, &my_tok);
+        ast_node node = ast_parse_function_call(line_tokens);
         if (node != NULL) {
           nodes = g_list_append(nodes, node);
         }
@@ -135,13 +154,69 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
     str_create(&(node_d->var_declare->name), str_val(&(identf_tok->value)));
     node_d->var_declare->value = ast_parse_expression(expression_toks);
   } else {
-    // TODO: handle error
+    // BUG: handle error
   }
 
   ast_node node;
   ast_create_node(&node, ast_declare, node_d);
 
   token_list_destroy(&expression_toks);
+  return node;
+}
+
+ast_node ast_parse_function_call(token_list tokens) {
+  if (tokens == NULL) {
+    perror("No tokens to parse");
+    exit(EXIT_FAILURE);
+  }
+
+  ast_node node;
+
+  token_list args_toks;
+  token_list_create(&args_toks);
+
+  GList *toks_iter = tokens->tokens;
+  token func_name = (token)toks_iter->data;
+
+  ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
+  if (node_d == NULL) {
+    perror("Failed to allocate memory for ast_data");
+    exit(EXIT_FAILURE);
+  }
+
+  node_d->fcall = (ast_fcall)malloc(sizeof(struct sAstFCall));
+  if (node_d->fcall == NULL) {
+    free(node_d);
+    perror("Failed to allocate memory for ast_fcall");
+    exit(EXIT_FAILURE);
+  }
+
+  str_cpy(&(node_d->fcall->name), &(func_name->value));
+  node_d->fcall->args = NULL;
+
+  toks_iter = toks_iter->next;
+
+  for (; toks_iter != NULL; toks_iter = toks_iter->next) {
+    token tok = (token)toks_iter->data;
+    token_pp(tok);
+
+    if (tok->type == token_oparentheses)
+      continue;
+
+    if (tok->type == token_comma || tok->type == token_cparentheses ||
+        tok->type == token_eos) {
+      ast_node arg_exp = ast_parse_expression(args_toks);
+      node_d->fcall->args = g_list_append(node_d->fcall->args, arg_exp);
+      token_list_clear(&args_toks);
+    } else {
+      token tok_cpy = token_cpy(tok);
+      token_list_append(&args_toks, &tok_cpy);
+    }
+  }
+
+  ast_create_node(&node, ast_func_call, node_d);
+  token_list_destroy(&args_toks);
+
   return node;
 }
 
@@ -222,7 +297,7 @@ ast_node ast_parse_expression(token_list tokens) {
     head = g_queue_pop_tail(operand_stack);
   }
 
-  // TODO: Check the operator_stack is empty, if not throw error
+  // BUG: Check the operator_stack is empty, if not throw error
 
   g_queue_free_full(operand_stack, _operand_stack_cleanup);
   g_queue_free_full(operator_stack, _operator_stack_cleanup);
@@ -234,6 +309,16 @@ void ast_pp(ast_node head) {
   case ast_declare:
     printf("(declare %s ", str_val(&(head->data->var_declare->name)));
     ast_pp(head->data->var_declare->value);
+    printf(")");
+    break;
+  case ast_func_call:
+    printf("(call %s ", str_val(&(head->data->fcall->name)));
+    GList *iter;
+    for (iter = head->data->fcall->args; iter != NULL; iter = iter->next) {
+      printf("(");
+      ast_pp((ast_node)iter->data);
+      printf(")");
+    }
     printf(")");
     break;
   case ast_str:
@@ -380,7 +465,7 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
     ast_create_node(node, ast_arithmetic_divide, node_d);
     break;
   default:
-    // TODO: handle error
+    // BUG: handle error
     break;
   }
 
@@ -399,4 +484,15 @@ static void _operator_stack_cleanup(void *itm) {
   if (tok != NULL) {
     token_destroy(&tok);
   }
+}
+
+static bool _function_call(token_list list) {
+  GList *iter = list->tokens;
+  token first_tok = (token)iter->data;
+  iter = iter->next;
+  token second_tok = (token)iter->data;
+  if (first_tok != NULL && second_tok != NULL) {
+    return first_tok->type == token_identf && second_tok->type != token_equal;
+  }
+  return false;
 }

@@ -46,6 +46,7 @@ void str_cpy(str *s, str *val) {
 
   strcpy((*s)->data, (*val)->data);
   (*s)->size = val_len;
+  (*s)->memstk_node = memstk_push((void **)&(*s), _memstk_str_cleanup);
 }
 
 void str_destroy(str *s) {

@@ -125,6 +125,8 @@ static const char *_get_token_label(token_type type) {
     return "EoS";
   case token_eof:
     return "EoF";
+  case token_comma:
+    return ",";
   default:
     return "UNKNOWN";
   }
