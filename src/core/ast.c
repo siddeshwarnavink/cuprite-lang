@@ -7,7 +7,10 @@
 
 #include "token.h"
 #include "utils/err.h"
+#include "utils/memstk.h"
 #include "utils/str.h"
+
+MEMSTK_CLEANUP(ast_node, ast_destroy_node);
 
 static bool _variable_declaration(token_list list);
 static bool _operator_token(token tok);
@@ -29,9 +32,13 @@ void ast_create_node(ast_node *node, ast_node_type type, ast_data data) {
 
     (*node)->type = type;
     (*node)->data = data;
+    (*node)->memstk_node =
+        memstk_push((void **)&(*node), _memstk_ast_node_cleanup);
 }
 
 void ast_destroy_node(ast_node *node) {
+    if (!(*node)) return;
+    (*node)->memstk_node->freed = true;
     if ((*node)->type == ast_arithmetic_add ||
         (*node)->type == ast_arithmetic_subtract ||
         (*node)->type == ast_arithmetic_multiply ||
@@ -64,6 +71,7 @@ void ast_destroy_node(ast_node *node) {
 void ast_parse_tokens(token_list tokens) {
     if (tokens == NULL) {
         err_throw(err_error, "No tokens passed.");
+        return;
     }
 
     GList *nodes = NULL;
@@ -76,8 +84,12 @@ void ast_parse_tokens(token_list tokens) {
         token tok = (token)token_iter->data;
         if (tok->type == token_eos || tok->type == token_eof) {
             // determine the synatx of line
+            // nothing :)
+            if (line_tokens->size == 1) {
+                return;
+            }
             // variable declaration
-            if (_variable_declaration(line_tokens)) {
+            else if (_variable_declaration(line_tokens)) {
                 ast_node node = ast_parse_variable_declaration(line_tokens);
                 if (node != NULL) {
                     nodes = g_list_append(nodes, node);
@@ -111,10 +123,12 @@ void ast_parse_tokens(token_list tokens) {
         GList *iter;
         for (iter = nodes; iter != NULL; iter = iter->next) {
             ast_node node = (ast_node)iter->data;
-            printf("AST: ");
-            ast_pp(node);
-            printf("\n");
-            ast_destroy_node(&node);
+            if (node != NULL) {
+                printf("AST: ");
+                ast_pp(node);
+                printf("\n");
+                ast_destroy_node(&node);
+            }
         }
         g_list_free(nodes);
     }
@@ -167,11 +181,6 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
 }
 
 ast_node ast_parse_function_call(token_list tokens) {
-    if (tokens == NULL) {
-        perror("No tokens to parse");
-        exit(EXIT_FAILURE);
-    }
-
     ast_node node;
 
     token_list args_toks;
@@ -225,38 +234,13 @@ ast_node ast_parse_function_call(token_list tokens) {
 }
 
 ast_node ast_parse_expression(token_list tokens) {
-    if (tokens == NULL) {
-        perror("No tokens to parse");
-        exit(EXIT_FAILURE);
-    }
-
     // Handle non-arithmetic expression
     if (tokens->size == 1) {
         token tok = (token)tokens->tokens->data;
 
         ast_node node = NULL;
         ast_data node_d;
-
-        switch (tok->type) {
-            case token_str:
-                node_d = (ast_data)malloc(sizeof(union uAstData));
-                str_create(&node_d->val_str, tok->value->data);
-                ast_create_node(&node, ast_str, node_d);
-                break;
-            case token_num_int:
-                node_d = (ast_data)malloc(sizeof(int));
-                node_d->val_int = atoi(tok->value->data);
-                ast_create_node(&node, ast_val_int, node_d);
-                break;
-            case token_num_float:
-                node_d = (ast_data)malloc(sizeof(float));
-                node_d->val_float = atof(tok->value->data);
-                ast_create_node(&node, ast_val_float, node_d);
-                break;
-            default:
-                err_throw(err_error, "Invalid expression");
-                break;
-        }
+        _extract_from_token(&node, tok);
 
         if (node_d == NULL) {
             perror("Failed to allocate memory for ast_data");
@@ -333,8 +317,6 @@ ast_node ast_parse_expression(token_list tokens) {
         g_queue_push_tail(operand_stack, node);
     }
 
-    // BUG: Check the operator_stack is empty, if not throw error
-
     head = g_queue_pop_tail(operand_stack);
 
     g_queue_free_full(operand_stack, _operand_stack_cleanup);
@@ -343,6 +325,7 @@ ast_node ast_parse_expression(token_list tokens) {
 }
 
 void ast_pp(ast_node head) {
+    if (!head) return;
     switch (head->type) {
         case ast_declare:
             printf("(declare %s ", str_val(&(head->data->var_declare->name)));
@@ -396,6 +379,7 @@ static void _arithmetic_pp(char *label, ast_node node) {
 
 static bool _variable_declaration(token_list list) {
     GList *iter = list->tokens;
+    if (!iter) return false;
     token first_tok = (token)iter->data;
     if (!iter->next) return false;
     iter = iter->next;
@@ -431,37 +415,27 @@ static int _arithmetic_operator_precedence(token_type type) {
 }
 
 static void _extract_from_token(ast_node *node, token tok) {
-    *node = malloc(sizeof(struct sAstNode));
-
-    if (*node == NULL) {
-        perror("Failed to allocate memory for node");
-        exit(EXIT_FAILURE);
-    }
+    ast_data node_d;
 
     switch (tok->type) {
+        case token_str:
+            node_d = (ast_data)malloc(sizeof(union uAstData));
+            str_create(&node_d->val_str, tok->value->data);
+            ast_create_node(node, ast_str, node_d);
+            break;
         case token_num_int:
-            (*node)->type = ast_val_int;
-            (*node)->data = (ast_data)malloc(sizeof(int));
-            if ((*node)->data == NULL) {
-                perror("Failed to allocate memory for node data");
-                free(*node);
-                exit(EXIT_FAILURE);
-            }
-            (*node)->data->val_int = atoi(str_val(&(tok->value)));
+            node_d = (ast_data)malloc(sizeof(int));
+            node_d->val_int = atoi(tok->value->data);
+            ast_create_node(node, ast_val_int, node_d);
             break;
         case token_num_float:
-            (*node)->type = ast_val_float;
-            (*node)->data = (ast_data)malloc(sizeof(float));
-            if ((*node)->data == NULL) {
-                perror("Failed to allocate memory for node data");
-                free(*node);
-                exit(EXIT_FAILURE);
-            }
-            (*node)->data->val_float = atof(str_val(&(tok->value)));
+            node_d = (ast_data)malloc(sizeof(float));
+            node_d->val_float = atof(tok->value->data);
+            ast_create_node(node, ast_val_float, node_d);
             break;
         default:
-            free(*node);
-            *node = NULL;
+            err_throw(err_error, "Invalid expression");
+            break;
     }
 }
 
@@ -470,6 +444,8 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
     ast_node opr1 = g_queue_pop_tail(operand_stack);
     ast_node opr2 = g_queue_pop_tail(operand_stack);
     token opt = g_queue_pop_tail(operator_stack);
+
+    // THIS IS WHERE THE PROBLEM IS
 
     if (opr1 == NULL || opr2 == NULL || opt == NULL) {
         return;
@@ -505,7 +481,7 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
             ast_create_node(node, ast_arithmetic_divide, node_d);
             break;
         default:
-            // BUG: handle error
+            err_throw(err_error, "Invalid arithmetic operator");
             break;
     }
 
@@ -528,6 +504,7 @@ static void _operator_stack_cleanup(void *itm) {
 
 static bool _function_call(token_list list) {
     GList *iter = list->tokens;
+    if (!iter) return false;
     token first_tok = (token)iter->data;
     if (!iter->next) return false;
     iter = iter->next;

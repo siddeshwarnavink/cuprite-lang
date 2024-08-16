@@ -2,52 +2,54 @@
 #define AST_H
 
 #include "token.h"
+#include "utils/memstk.h"
 
 /**
  * @file ast.h
  */
 
 typedef enum {
-  ast_declare,
-  ast_arithmetic_add,
-  ast_arithmetic_subtract,
-  ast_arithmetic_multiply,
-  ast_arithmetic_divide,
-  ast_val_int,
-  ast_val_float,
-  ast_str,
-  ast_func_call
+    ast_declare,
+    ast_arithmetic_add,
+    ast_arithmetic_subtract,
+    ast_arithmetic_multiply,
+    ast_arithmetic_divide,
+    ast_val_int,
+    ast_val_float,
+    ast_str,
+    ast_func_call
 } ast_node_type;
 
 typedef struct sAstNode *ast_node;
 
 typedef struct sAstVarDeclare {
-  str name;
-  ast_node value;
+    str name;
+    ast_node value;
 } *ast_var_declare;
 
 typedef struct sAstFCall {
-  str name;
-  GList *args;
+    str name;
+    GList *args;
 } *ast_fcall;
 
 typedef struct sAstArithmeticData {
-  ast_node left;
-  ast_node right;
+    ast_node left;
+    ast_node right;
 } *ast_arithmetic_data;
 
 typedef union uAstData {
-  ast_var_declare var_declare;
-  ast_arithmetic_data arithmetic;
-  ast_fcall fcall;
-  int val_int;
-  float val_float;
-  str val_str;
+    ast_var_declare var_declare;
+    ast_arithmetic_data arithmetic;
+    ast_fcall fcall;
+    int val_int;
+    float val_float;
+    str val_str;
 } *ast_data;
 
 typedef struct sAstNode {
-  ast_node_type type;
-  ast_data data;
+    ast_node_type type;
+    ast_data data;
+    memstk_node *memstk_node;
 } sAstNode;
 
 /**
