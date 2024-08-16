@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "glib.h"
+#include "glibconfig.h"
 #include "token.h"
 #include "utils/str.h"
 
@@ -23,10 +25,23 @@ void parse_line(token_list *list, char *line) {
     bool reading_num = false;
     bool reading_idetf = false;
     bool reading_str = false;
-    bool end_string = false;
+
+    GQueue *operator_stack = g_queue_new();
 
     for (unsigned int i = 0; i < line_size; i++) {
         char ch = line[i];
+        char tail_op = GPOINTER_TO_INT(g_queue_peek_tail(operator_stack));
+
+        if (ch == '"') {
+            if (tail_op == '"') {
+                g_queue_pop_tail(operator_stack);
+                reading_str = false;
+            } else {
+                g_queue_push_tail(operator_stack, GINT_TO_POINTER('"'));
+                reading_str = true;
+            }
+        }
+
         if (!reading_str && _is_whitespace(ch)) {
             continue;
         }
@@ -91,7 +106,7 @@ void parse_line(token_list *list, char *line) {
         }
 
         // Read identifiers
-        if ((!_is_number(ch) && !_is_operator(ch) && ch != '"' &&
+        if ((!_is_number(ch) && !_is_operator(ch) && tail_op != '"' &&
              !reading_str) ||
             reading_idetf) {
             reading_idetf = true;
@@ -109,8 +124,7 @@ void parse_line(token_list *list, char *line) {
         }
 
         // Reading string
-        if ((ch == '"' || reading_str) && !end_string) {
-            reading_str = true;
+        if (reading_str) {
             if ((i + 1 < line_size && line[i + 1] == '"') ||
                 (reading_idetf && i + 1 == line_size)) {
                 char *str_str = str_val(&tok_str);
@@ -120,14 +134,13 @@ void parse_line(token_list *list, char *line) {
 
                 token_list_append(list, &tok);
                 str_clear(&tok_str);
-                end_string = true;
             }
             continue;
         }
     }
 
+    g_queue_free(operator_stack);
     str_destroy(&tok_str);
-    end_string = false;
 }
 
 static bool _is_whitespace(char ch) {
