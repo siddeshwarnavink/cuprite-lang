@@ -1,6 +1,8 @@
 #ifndef AST_H
 #define AST_H
 
+#include <stdbool.h>
+
 #include "token.h"
 #include "utils/memstk.h"
 
@@ -17,7 +19,8 @@ typedef enum {
     ast_val_int,
     ast_val_float,
     ast_str,
-    ast_func_call
+    ast_func_call,
+    ast_bool,
 } ast_node_type;
 
 typedef struct sAstNode *ast_node;
@@ -44,6 +47,7 @@ typedef union uAstData {
     int val_int;
     float val_float;
     str val_str;
+    bool val_bool;
 } *ast_data;
 
 typedef struct sAstNode {

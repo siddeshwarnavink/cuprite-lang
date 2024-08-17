@@ -84,12 +84,8 @@ void ast_parse_tokens(token_list tokens) {
         token tok = (token)token_iter->data;
         if (tok->type == token_eos || tok->type == token_eof) {
             // determine the synatx of line
-            // nothing :)
-            if (line_tokens->size == 1) {
-                return;
-            }
             // variable declaration
-            else if (_variable_declaration(line_tokens)) {
+            if (_variable_declaration(line_tokens)) {
                 ast_node node = ast_parse_variable_declaration(line_tokens);
                 if (node != NULL) {
                     nodes = g_list_append(nodes, node);
@@ -209,8 +205,6 @@ ast_node ast_parse_function_call(token_list tokens) {
 
     for (; toks_iter != NULL; toks_iter = toks_iter->next) {
         token tok = (token)toks_iter->data;
-        token_pp(tok);
-
         if (tok->type == token_oparentheses) continue;
 
         if (tok->type == token_comma || tok->type == token_cparentheses ||
@@ -237,16 +231,8 @@ ast_node ast_parse_expression(token_list tokens) {
     // Handle non-arithmetic expression
     if (tokens->size == 1) {
         token tok = (token)tokens->tokens->data;
-
         ast_node node = NULL;
-        ast_data node_d;
         _extract_from_token(&node, tok);
-
-        if (node_d == NULL) {
-            perror("Failed to allocate memory for ast_data");
-            exit(EXIT_FAILURE);
-        }
-
         return node;
     }
 
@@ -346,6 +332,9 @@ void ast_pp(ast_node head) {
         case ast_str:
             printf("\"%s\"", str_val(&head->data->val_str));
             break;
+        case ast_bool:
+            printf("%s", head->data->val_bool ? "true" : "false");
+            break;
         case ast_val_int:
             printf("%d", head->data->val_int);
             break;
@@ -432,6 +421,12 @@ static void _extract_from_token(ast_node *node, token tok) {
             node_d = (ast_data)malloc(sizeof(float));
             node_d->val_float = atof(tok->value->data);
             ast_create_node(node, ast_val_float, node_d);
+            break;
+        case token_bool_t:
+        case token_bool_f:
+            node_d = (ast_data)malloc(sizeof(bool));
+            node_d->val_bool = tok->type == token_bool_t;
+            ast_create_node(node, ast_bool, node_d);
             break;
         default:
             err_throw(err_error, "Invalid expression");

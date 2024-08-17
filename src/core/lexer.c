@@ -114,7 +114,15 @@ void parse_line(token_list *list, char *line) {
                 (i + 1 < line_size && _is_whitespace(line[i + 1])) ||
                 (reading_idetf && i + 1 == line_size)) {
                 char *idetf_str = str_val(&tok_str);
-                token_create(&tok, token_identf, idetf_str);
+
+                if (strcmp(idetf_str, "true") == 0) {
+                    token_create(&tok, token_bool_t, NULL);
+                } else if (strcmp(idetf_str, "false") == 0) {
+                    token_create(&tok, token_bool_f, NULL);
+                } else {
+                    token_create(&tok, token_identf, idetf_str);
+                }
+
                 reading_idetf = false;
 
                 token_list_append(list, &tok);
