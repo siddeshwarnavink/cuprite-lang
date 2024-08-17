@@ -11,7 +11,14 @@
 #include "utils/str.h"
 
 MEMSTK_CLEANUP(ast_node, ast_destroy_node);
+ASTDATA_CLEANUP(ast_declare);
+ASTDATA_CLEANUP(ast_func_call);
+ASTDATA_CLEANUP(ast_arithmetic_add);
+ASTDATA_CLEANUP(ast_arithmetic_subtract);
+ASTDATA_CLEANUP(ast_arithmetic_multiply);
+ASTDATA_CLEANUP(ast_arithmetic_divide);
 
+static void _ast_list_clean(void *lst);
 static bool _variable_declaration(token_list list);
 static bool _operator_token(token tok);
 static int _arithmetic_operator_precedence(token_type type);
@@ -34,36 +41,117 @@ void ast_create_node(ast_node *node, ast_node_type type, ast_data data) {
     (*node)->data = data;
     (*node)->memstk_node =
         memstk_push((void **)&(*node), _memstk_ast_node_cleanup);
+    (*node)->data_memstk_node = NULL;
+}
+
+memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
+    switch (type) {
+        case ast_val_int:
+            *data = (ast_data)malloc(sizeof(int));
+            break;
+        case ast_val_float:
+            *data = (ast_data)malloc(sizeof(float));
+            break;
+        case ast_bool:
+            *data = (ast_data)malloc(sizeof(bool));
+            break;
+        case ast_arithmetic_add:
+            *data = (ast_data)malloc(sizeof(union uAstData));
+            (*data)->arithmetic =
+                (ast_arithmetic_data)malloc(sizeof(struct sAstArithmeticData));
+            if ((*data)->arithmetic == NULL) {
+                free(*data);
+                perror("Failed to allocate memory for ast_arithmetic_data");
+                exit(EXIT_FAILURE);
+            }
+            break;
+        default:
+            *data = (ast_data)malloc(sizeof(union uAstData));
+            break;
+    }
+
+    if (*data == NULL) {
+        perror("Failed to allocate memory for ast_data");
+        exit(EXIT_FAILURE);
+    }
+
+    switch (type) {
+        case ast_declare:
+            (*data)->var_declare =
+                (ast_var_declare)malloc(sizeof(struct sAstVarDeclare));
+            if ((*data)->var_declare == NULL) {
+                free((*data));
+                perror("Failed to allocate memory for ast_var_declare_data");
+                exit(EXIT_FAILURE);
+            }
+            return memstk_push((void **)&(*data), _ast_declare_cleanup);
+        case ast_func_call:
+            (*data)->fcall = (ast_fcall)malloc(sizeof(struct sAstFCall));
+            if ((*data)->fcall == NULL) {
+                free(*data);
+                perror("Failed to allocate memory for ast_fcall");
+                exit(EXIT_FAILURE);
+            }
+            (*data)->fcall->args = NULL;
+            return memstk_push((void **)&(*data), _ast_func_call_cleanup);
+        case ast_arithmetic_add:
+            return memstk_push((void **)&(*data), _ast_arithmetic_add_cleanup);
+        case ast_arithmetic_subtract:
+            return memstk_push((void **)&(*data),
+                               _ast_arithmetic_subtract_cleanup);
+        case ast_arithmetic_multiply:
+            return memstk_push((void **)&(*data),
+                               _ast_arithmetic_multiply_cleanup);
+        case ast_arithmetic_divide:
+            return memstk_push((void **)&(*data),
+                               _ast_arithmetic_divide_cleanup);
+        default:
+            break;
+    }
+    return NULL;
+}
+
+void ast_destroy_node_data(ast_data *data, ast_node_type type) {
+    switch (type) {
+        case ast_arithmetic_add:
+        case ast_arithmetic_subtract:
+        case ast_arithmetic_multiply:
+        case ast_arithmetic_divide:
+            ast_destroy_node(&((*data)->arithmetic->left));
+            ast_destroy_node(&((*data)->arithmetic->right));
+            free((*data)->arithmetic);
+            break;
+        case ast_declare:
+            str_destroy(&((*data)->var_declare->name));
+            ast_destroy_node(&((*data)->var_declare->value));
+            free((*data)->var_declare);
+            break;
+        case ast_str:
+            str_destroy(&((*data)->val_str));
+            break;
+        case ast_func_call:
+            str_destroy(&((*data)->fcall->name));
+            GList *iter;
+            for (iter = (*data)->fcall->args; iter != NULL; iter = iter->next) {
+                ast_node node = (ast_node)iter->data;
+                ast_destroy_node(&node);
+            }
+            g_list_free((*data)->fcall->args);
+            free((*data)->fcall);
+            break;
+        default:
+            break;
+    }
+    free((*data));
 }
 
 void ast_destroy_node(ast_node *node) {
     if (!(*node)) return;
-    (*node)->memstk_node->freed = true;
-    if ((*node)->type == ast_arithmetic_add ||
-        (*node)->type == ast_arithmetic_subtract ||
-        (*node)->type == ast_arithmetic_multiply ||
-        (*node)->type == ast_arithmetic_divide) {
-        ast_destroy_node(&((*node)->data->arithmetic->left));
-        ast_destroy_node(&((*node)->data->arithmetic->right));
-        free((*node)->data->arithmetic);
-    } else if ((*node)->type == ast_declare) {
-        str_destroy(&((*node)->data->var_declare->name));
-        ast_destroy_node(&((*node)->data->var_declare->value));
-        free((*node)->data->var_declare);
-    } else if ((*node)->type == ast_str) {
-        str_destroy(&((*node)->data->val_str));
-    } else if ((*node)->type == ast_func_call) {
-        str_destroy(&((*node)->data->fcall->name));
-        GList *iter;
-        for (iter = (*node)->data->fcall->args; iter != NULL;
-             iter = iter->next) {
-            ast_node node = (ast_node)iter->data;
-            ast_destroy_node(&node);
-        }
-        g_list_free((*node)->data->fcall->args);
-        free((*node)->data->fcall);
+    if ((*node)->data_memstk_node != NULL) {
+        (*node)->data_memstk_node->freed = true;
     }
-    free((*node)->data);
+    (*node)->memstk_node->freed = true;
+    ast_destroy_node_data(&((*node)->data), (*node)->type);
     free(*node);
     *node = NULL;
 }
@@ -77,6 +165,8 @@ void ast_parse_tokens(token_list tokens) {
     GList *nodes = NULL;
     token_list line_tokens;
     token_list_create(&line_tokens);
+
+    memstk_push((void **)nodes, _ast_list_clean);
 
     GList *token_iter;
     for (token_iter = tokens->tokens; token_iter != NULL;
@@ -146,19 +236,8 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
         token_list_append(&expression_toks, &tok_cp);
     }
 
-    ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
-    if (node_d == NULL) {
-        perror("Failed to allocate memory for ast_data");
-        exit(EXIT_FAILURE);
-    }
-
-    node_d->var_declare =
-        (ast_var_declare)malloc(sizeof(struct sAstVarDeclare));
-    if (node_d->var_declare == NULL) {
-        free(node_d);
-        perror("Failed to allocate memory for ast_var_declare_data");
-        exit(EXIT_FAILURE);
-    }
+    ast_data node_d;
+    memstk_node *node_d_memstk = ast_create_node_data(&node_d, ast_declare);
 
     GList *firstel = g_list_first(tokens->tokens);
     if (firstel != NULL) {
@@ -171,6 +250,7 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
 
     ast_node node;
     ast_create_node(&node, ast_declare, node_d);
+    node->data_memstk_node = node_d_memstk;
 
     token_list_destroy(&expression_toks);
     return node;
@@ -185,21 +265,9 @@ ast_node ast_parse_function_call(token_list tokens) {
     GList *toks_iter = tokens->tokens;
     token func_name = (token)toks_iter->data;
 
-    ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
-    if (node_d == NULL) {
-        perror("Failed to allocate memory for ast_data");
-        exit(EXIT_FAILURE);
-    }
-
-    node_d->fcall = (ast_fcall)malloc(sizeof(struct sAstFCall));
-    if (node_d->fcall == NULL) {
-        free(node_d);
-        perror("Failed to allocate memory for ast_fcall");
-        exit(EXIT_FAILURE);
-    }
-
+    ast_data node_d;
+    memstk_node *node_d_memstk = ast_create_node_data(&node_d, ast_func_call);
     str_cpy(&(node_d->fcall->name), &(func_name->value));
-    node_d->fcall->args = NULL;
 
     toks_iter = toks_iter->next;
 
@@ -222,6 +290,7 @@ ast_node ast_parse_function_call(token_list tokens) {
     }
 
     ast_create_node(&node, ast_func_call, node_d);
+    node->data_memstk_node = node_d_memstk;
     token_list_destroy(&args_toks);
 
     return node;
@@ -244,15 +313,13 @@ ast_node ast_parse_expression(token_list tokens) {
         token tok = (token)iter->data;
 
         if (tok->type == token_str) {
-            ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
-            if (node_d == NULL) {
-                perror("Failed to allocate memory for ast_data");
-                exit(EXIT_FAILURE);
-            }
+            ast_data node_d;
+            memstk_node *node_d_memstk = ast_create_node_data(&node_d, ast_str);
             str_create(&node_d->val_str, str_val(&tok->value));
 
             ast_node node;
             ast_create_node(&node, ast_str, node_d);
+            node->data_memstk_node = node_d_memstk;
             g_queue_push_tail(operand_stack, node);
             continue;
         }
@@ -407,27 +474,34 @@ static void _extract_from_token(ast_node *node, token tok) {
     ast_data node_d;
 
     switch (tok->type) {
-        case token_str:
-            node_d = (ast_data)malloc(sizeof(union uAstData));
+        case token_str: {
+            memstk_node *node_d_memstk = ast_create_node_data(&node_d, ast_str);
             str_create(&node_d->val_str, tok->value->data);
             ast_create_node(node, ast_str, node_d);
-            break;
-        case token_num_int:
-            node_d = (ast_data)malloc(sizeof(int));
+            (*node)->data_memstk_node = node_d_memstk;
+        } break;
+        case token_num_int: {
+            memstk_node *node_d_memstk =
+                ast_create_node_data(&node_d, ast_val_int);
             node_d->val_int = atoi(tok->value->data);
             ast_create_node(node, ast_val_int, node_d);
-            break;
-        case token_num_float:
-            node_d = (ast_data)malloc(sizeof(float));
+            (*node)->data_memstk_node = node_d_memstk;
+        } break;
+        case token_num_float: {
+            memstk_node *node_d_memstk =
+                ast_create_node_data(&node_d, ast_val_float);
             node_d->val_float = atof(tok->value->data);
             ast_create_node(node, ast_val_float, node_d);
-            break;
+            (*node)->data_memstk_node = node_d_memstk;
+        } break;
         case token_bool_t:
-        case token_bool_f:
-            node_d = (ast_data)malloc(sizeof(bool));
+        case token_bool_f: {
+            memstk_node *node_d_memstk =
+                ast_create_node_data(&node_d, ast_bool);
             node_d->val_bool = tok->type == token_bool_t;
             ast_create_node(node, ast_bool, node_d);
-            break;
+            (*node)->data_memstk_node = node_d_memstk;
+        } break;
         default:
             err_throw(err_error, "Invalid expression");
             break;
@@ -440,28 +514,37 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
     ast_node opr2 = g_queue_pop_tail(operand_stack);
     token opt = g_queue_pop_tail(operator_stack);
 
-    // THIS IS WHERE THE PROBLEM IS
-
     if (opr1 == NULL || opr2 == NULL || opt == NULL) {
         return;
     }
 
-    ast_data node_d = (ast_data)malloc(sizeof(union uAstData));
-    if (node_d == NULL) {
-        perror("Failed to allocate memory for ast_data");
-        exit(EXIT_FAILURE);
-    }
+    ast_data node_d;
+    memstk_node *node_d_memstk = NULL;
 
-    node_d->arithmetic =
-        (ast_arithmetic_data)malloc(sizeof(struct sAstArithmeticData));
-    if (node_d->arithmetic == NULL) {
-        free(node_d);
-        perror("Failed to allocate memory for ast_arithmetic_data");
-        exit(EXIT_FAILURE);
+    switch (opt->type) {
+        case token_plus:
+            node_d_memstk = ast_create_node_data(&node_d, ast_arithmetic_add);
+            break;
+        case token_hyphen:
+            node_d_memstk =
+                ast_create_node_data(&node_d, ast_arithmetic_subtract);
+            break;
+        case token_asterisk:
+            node_d_memstk =
+                ast_create_node_data(&node_d, ast_arithmetic_multiply);
+            break;
+        case token_fslash:
+            node_d_memstk =
+                ast_create_node_data(&node_d, ast_arithmetic_divide);
+            break;
+        default:
+            err_throw(err_error, "Invalid arithmetic operator");
+            break;
     }
 
     node_d->arithmetic->left = opr2;
     node_d->arithmetic->right = opr1;
+
     switch (opt->type) {
         case token_plus:
             ast_create_node(node, ast_arithmetic_add, node_d);
@@ -479,6 +562,8 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
             err_throw(err_error, "Invalid arithmetic operator");
             break;
     }
+
+    (*node)->data_memstk_node = node_d_memstk;
 
     token_destroy(&opt);
 }
@@ -509,4 +594,14 @@ static bool _function_call(token_list list) {
                second_tok->type != token_equal;
     }
     return false;
+}
+
+static void _ast_list_clean(void *lst) {
+    GList *list = (GList *)lst, *iter;
+    for (iter = list; iter != NULL; iter = iter->next) {
+        ast_node node = (ast_node)iter->data;
+        ast_destroy_node(&node);
+    }
+
+    g_list_free(list);
 }

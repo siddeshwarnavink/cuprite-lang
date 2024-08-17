@@ -6,6 +6,12 @@
 #include "token.h"
 #include "utils/memstk.h"
 
+#define ASTDATA_CLEANUP(type)                  \
+    static void _##type##_cleanup(void *itm) { \
+        ast_data data = (ast_data)itm;         \
+        ast_destroy_node_data(&data, type);    \
+    }
+
 /**
  * @file ast.h
  */
@@ -53,7 +59,7 @@ typedef union uAstData {
 typedef struct sAstNode {
     ast_node_type type;
     ast_data data;
-    memstk_node *memstk_node;
+    memstk_node *memstk_node, *data_memstk_node;
 } sAstNode;
 
 /**
@@ -65,10 +71,24 @@ typedef struct sAstNode {
 void ast_create_node(ast_node *node, ast_node_type type, ast_data data);
 
 /**
+ * @brief Create a AST node data.
+ * @param data Node data.
+ * @param type Node type.
+ */
+memstk_node *ast_create_node_data(ast_data *data, ast_node_type type);
+
+/**
  * @brief Destroy a AST node.
  * @param node Node.
  */
 void ast_destroy_node(ast_node *node);
+
+/**
+ * @brief Destroy a AST node data
+ * @param data Node data
+ * @param type Node type.
+ */
+void ast_destroy_node_data(ast_data *data, ast_node_type type);
 
 /**
  * @brief Parse variable declaration

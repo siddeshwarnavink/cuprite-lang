@@ -34,10 +34,12 @@ void err_throw(err_type type, char *msg) {
             printf("\033[1;33m\uea6c [Error]\033[0m %s\n", msg);
             break;
         case err_error:
+            memstk_clean();
             printf("\033[1;31m\uea6c [Error]\033[0m %s\n", msg);
             longjmp(myerr->buf, 1);
             break;
         case err_fatal:
+            memstk_clean();
             printf("\033[1;31m\uea6c [Fatal error]\033[0m %s\n", msg);
             longjmp(myerr->buf, 1);
             break;

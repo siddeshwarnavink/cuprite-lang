@@ -46,7 +46,7 @@ void memstk_clean() {
 static void _clean_node(void *n) {
     memstk_node *node = n;
     if (node != NULL) {
-        if (!node->freed) {
+        if (!node->freed && node->resource != NULL) {
             // printf("cleaning up %p\n", node->resource);
             if (node->cleanup) {
                 node->cleanup(*node->resource);
