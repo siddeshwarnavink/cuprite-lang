@@ -30,7 +30,8 @@ typedef enum {
     ast_func_call,
     ast_bool,
     ast_cond_block,
-    ast_cond_is
+    ast_cond_is,
+    ast_cond_is_not
 } ast_node_type;
 
 typedef struct sAstNode *ast_node;

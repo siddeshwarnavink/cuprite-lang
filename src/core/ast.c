@@ -62,6 +62,7 @@ memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
         case ast_arithmetic_multiply:
         case ast_arithmetic_divide:
         case ast_cond_is:
+        case ast_cond_is_not:
             *data = (ast_data)malloc(sizeof(union uAstData));
             (*data)->expression =
                 (ast_expression_data)malloc(sizeof(struct sAstExpressionData));
@@ -122,6 +123,7 @@ void ast_destroy_node_data(ast_data *data, ast_node_type type) {
         case ast_arithmetic_multiply:
         case ast_arithmetic_divide:
         case ast_cond_is:
+        case ast_cond_is_not:
             ast_destroy_node(&((*data)->expression->left));
             ast_destroy_node(&((*data)->expression->right));
             free((*data)->expression);
@@ -378,16 +380,23 @@ ast_node ast_parse_expression(token_list tokens) {
 
         // its operator
         else if (_operator_token(tok)) {
-            token tok_cp = token_cpy(tok);
-            token top;
-            while ((top = (token)g_queue_peek_tail(operator_stack)) != NULL &&
-                   _operator_precedence(top->type) <=
-                       _operator_precedence(tok_cp->type)) {
-                ast_node node;
-                _make_expression_node(&node, operator_stack, operand_stack);
-                g_queue_push_tail(operand_stack, node);
+            // check if 'is not'
+            if (tok->type == token_is && iter->next != NULL &&
+                ((token)iter->next->data)->type == token_not) {
+                // ...
+            } else {
+                token tok_cp = token_cpy(tok);
+                token top;
+                while ((top = (token)g_queue_peek_tail(operator_stack)) !=
+                           NULL &&
+                       _operator_precedence(top->type) <=
+                           _operator_precedence(tok_cp->type)) {
+                    ast_node node;
+                    _make_expression_node(&node, operator_stack, operand_stack);
+                    g_queue_push_tail(operand_stack, node);
+                }
+                g_queue_push_tail(operator_stack, tok_cp);
             }
-            g_queue_push_tail(operator_stack, tok_cp);
         }
     }
 
@@ -444,7 +453,10 @@ void ast_pp(ast_node head) {
             printf("%.2f", head->data->val_float);
             break;
         case ast_cond_is:
-            _arithmetic_pp("equal", head);
+            _arithmetic_pp("eq", head);
+            break;
+        case ast_cond_is_not:
+            _arithmetic_pp("neq", head);
             break;
         case ast_arithmetic_add:
             _arithmetic_pp("add", head);
@@ -494,7 +506,8 @@ static bool _variable_declaration(token_list list) {
 static bool _operator_token(token tok) {
     return tok->type == token_plus || tok->type == token_hyphen ||
            tok->type == token_asterisk || tok->type == token_fslash ||
-           tok->type == token_percent || tok->type == token_is;
+           tok->type == token_percent || tok->type == token_is ||
+           tok->type == token_not;
 }
 
 static int _operator_precedence(token_type type) {
@@ -591,6 +604,9 @@ static void _make_expression_node(ast_node *node, GQueue *operator_stack,
         case token_is:
             node_d_memstk = ast_create_node_data(&node_d, ast_cond_is);
             break;
+        case token_not:
+            node_d_memstk = ast_create_node_data(&node_d, ast_cond_is_not);
+            break;
         default:
             err_throw(err_error, "Invalid arithmetic operator");
             break;
@@ -614,6 +630,9 @@ static void _make_expression_node(ast_node *node, GQueue *operator_stack,
             break;
         case token_is:
             ast_create_node(node, ast_cond_is, node_d);
+            break;
+        case token_not:
+            ast_create_node(node, ast_cond_is_not, node_d);
             break;
         default:
             err_throw(err_error, "Invalid arithmetic operator");
@@ -647,6 +666,7 @@ static bool _is_operator_token(token tok) {
         case token_fslash:
         case token_equal:
         case token_is:
+        case token_not:
             return true;
         default:
             return false;
