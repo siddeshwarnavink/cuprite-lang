@@ -137,14 +137,8 @@ void parse_line(token_list *list, char *line) {
                 } else if (strcmp(idetf_str, "not") == 0) {
                     token_create(&tok, token_not, NULL);
                 } else if (strcmp(idetf_str, "do") == 0) {
-                    g_queue_push_tail(operator_stack, GINT_TO_POINTER('b'));
                     token_create(&tok, token_do, NULL);
                 } else if (strcmp(idetf_str, "end") == 0) {
-                    char tail_op =
-                        GPOINTER_TO_INT(g_queue_peek_tail(operator_stack));
-                    if (tail_op == 'b') {
-                        g_queue_pop_tail(operator_stack);
-                    }
                     token_create(&tok, token_end, NULL);
                 } else {
                     token_create(&tok, token_identf, idetf_str);

@@ -19,6 +19,8 @@ ASTDATA_CLEANUP(ast_arithmetic_multiply);
 ASTDATA_CLEANUP(ast_arithmetic_divide);
 
 static void _ast_list_clean(void *lst);
+static void _ast_stack_clean(void *itm);
+static void _token_stack_clean(void *itm);
 static bool _variable_declaration(token_list list);
 static bool _operator_token(token tok);
 static int _arithmetic_operator_precedence(token_type type);
@@ -166,7 +168,7 @@ void ast_parse_tokens(token_list tokens) {
     token_list line_tokens;
     token_list_create(&line_tokens);
 
-    memstk_push((void **)nodes, _ast_list_clean);
+    memstk_node *nodes_memstk = memstk_push((void **)nodes, _ast_list_clean);
 
     GList *token_iter;
     for (token_iter = tokens->tokens; token_iter != NULL;
@@ -216,6 +218,7 @@ void ast_parse_tokens(token_list tokens) {
                 ast_destroy_node(&node);
             }
         }
+        nodes_memstk->freed = true;
         g_list_free(nodes);
     }
 
@@ -245,7 +248,7 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
         str_create(&(node_d->var_declare->name), str_val(&(identf_tok->value)));
         node_d->var_declare->value = ast_parse_expression(expression_toks);
     } else {
-        // BUG: handle error
+        err_throw(err_error, "Invalid variable declaration");
     }
 
     ast_node node;
@@ -307,6 +310,11 @@ ast_node ast_parse_expression(token_list tokens) {
 
     ast_node head;
     GQueue *operator_stack = g_queue_new(), *operand_stack = g_queue_new();
+
+    memstk_node *operator_stack_memstk =
+        memstk_push((void **)&operator_stack, _token_stack_clean);
+    memstk_node *operand_stack_memstk =
+        memstk_push((void **)&operand_stack, _ast_stack_clean);
 
     GList *iter;
     for (iter = tokens->tokens; iter != NULL; iter = iter->next) {
@@ -372,8 +380,12 @@ ast_node ast_parse_expression(token_list tokens) {
 
     head = g_queue_pop_tail(operand_stack);
 
+    operator_stack_memstk->freed = true;
+    operand_stack_memstk->freed = true;
+
     g_queue_free_full(operand_stack, _operand_stack_cleanup);
     g_queue_free_full(operator_stack, _operator_stack_cleanup);
+
     return head;
 }
 
@@ -604,4 +616,14 @@ static void _ast_list_clean(void *lst) {
     }
 
     g_list_free(list);
+}
+
+static void _ast_stack_clean(void *itm) {
+    GQueue *stack = (GQueue *)itm;
+    g_queue_free_full(stack, _operand_stack_cleanup);
+}
+
+static void _token_stack_clean(void *itm) {
+    GQueue *stack = (GQueue *)itm;
+    g_queue_free_full(stack, _operator_stack_cleanup);
 }
