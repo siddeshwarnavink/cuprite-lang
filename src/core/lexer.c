@@ -126,10 +126,26 @@ void parse_line(token_list *list, char *line) {
                 (reading_idetf && i + 1 == line_size)) {
                 char *idetf_str = str_val(&tok_str);
 
-                if (strcmp(idetf_str, "true") == 0) {
+                if (strcmp(idetf_str, "tru") == 0) {
                     token_create(&tok, token_bool_t, NULL);
-                } else if (strcmp(idetf_str, "false") == 0) {
+                } else if (strcmp(idetf_str, "fls") == 0) {
                     token_create(&tok, token_bool_f, NULL);
+                } else if (strcmp(idetf_str, "whn") == 0) {
+                    token_create(&tok, token_when, NULL);
+                } else if (strcmp(idetf_str, "is") == 0) {
+                    token_create(&tok, token_is, NULL);
+                } else if (strcmp(idetf_str, "not") == 0) {
+                    token_create(&tok, token_not, NULL);
+                } else if (strcmp(idetf_str, "do") == 0) {
+                    g_queue_push_tail(operator_stack, GINT_TO_POINTER('b'));
+                    token_create(&tok, token_do, NULL);
+                } else if (strcmp(idetf_str, "end") == 0) {
+                    char tail_op =
+                        GPOINTER_TO_INT(g_queue_peek_tail(operator_stack));
+                    if (tail_op == 'b') {
+                        g_queue_pop_tail(operator_stack);
+                    }
+                    token_create(&tok, token_end, NULL);
                 } else {
                     token_create(&tok, token_identf, idetf_str);
                 }

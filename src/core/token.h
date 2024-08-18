@@ -1,9 +1,8 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-#include <stdbool.h>
-
 #include <glib.h>
+#include <stdbool.h>
 
 #include "utils/memstk.h"
 #include "utils/str.h"
@@ -13,35 +12,40 @@
  */
 
 typedef enum {
-  token_num_int,
-  token_num_float,
-  token_str,
-  token_identf, /**< Variables, function name  */
-  token_plus,
-  token_hyphen,
-  token_asterisk,
-  token_fslash, /**< Forward slash  */
-  token_percent,
-  token_oparentheses, /**< Open parentheses  */
-  token_cparentheses, /**< Close parentheses  */
-  token_equal,
-  token_eos, /**< End of statement  */
-  token_eof, /**< End of line  */
-  token_comma,
-  token_bool_t,
-  token_bool_f
+    token_num_int,
+    token_num_float,
+    token_str,
+    token_identf, /**< Variables, function name  */
+    token_plus,
+    token_hyphen,
+    token_asterisk,
+    token_fslash, /**< Forward slash  */
+    token_percent,
+    token_oparentheses, /**< Open parentheses  */
+    token_cparentheses, /**< Close parentheses  */
+    token_equal,
+    token_eos, /**< End of statement  */
+    token_eof, /**< End of line  */
+    token_comma,
+    token_bool_t,
+    token_bool_f,
+    token_when,
+    token_is,
+    token_not,
+    token_do,
+    token_end
 } token_type;
 
 typedef struct sToken {
-  token_type type; /**< Token type  */
-  str value;       /**< Token value  */
-  memstk_node *memstk_node;
+    token_type type; /**< Token type  */
+    str value;       /**< Token value  */
+    memstk_node *memstk_node;
 } *token;
 
 typedef struct sToken_list {
-  GList *tokens;     /**< List of tokens  */
-  unsigned int size; /**< Size of array  */
-  memstk_node *memstk_node;
+    GList *tokens;     /**< List of tokens  */
+    unsigned int size; /**< Size of array  */
+    memstk_node *memstk_node;
 } *token_list;
 
 /**

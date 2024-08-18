@@ -104,6 +104,16 @@ static const char *_get_token_label(token_type type) {
             return "INT";
         case token_num_float:
             return "FLOAT";
+        case token_when:
+            return "WHEN";
+        case token_is:
+            return "IS";
+        case token_not:
+            return "NOT";
+        case token_do:
+            return "DO";
+        case token_end:
+            return "END";
         case token_str:
             return "STRING";
         case token_bool_t:
