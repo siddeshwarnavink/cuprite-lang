@@ -81,7 +81,7 @@ void parse_line(token_list *list, char *line) {
                     token_create(&tok, token_cparentheses, NULL);
                     char tail_op =
                         GPOINTER_TO_INT(g_queue_peek_tail(operator_stack));
-                    if (tail_op != '(') {
+                    if (tail_op == '(') {
                         g_queue_pop_tail(operator_stack);
                     }
                     break;
