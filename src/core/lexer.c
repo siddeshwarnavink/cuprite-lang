@@ -8,6 +8,8 @@
 #include "glib.h"
 #include "glibconfig.h"
 #include "token.h"
+#include "utils/err.h"
+#include "utils/memstk.h"
 #include "utils/str.h"
 
 static bool _is_whitespace(char ch);
@@ -15,6 +17,7 @@ static bool _is_number(char ch);
 static bool _is_operator(char ch);
 static token_type _number_type(char *num);
 static void _remove_first_char(char *str);
+static void _ops_memstk_cleanup(void *itm);
 
 void parse_line(token_list *list, char *line) {
     unsigned int line_size = strlen(line);
@@ -27,6 +30,8 @@ void parse_line(token_list *list, char *line) {
     bool reading_str = false;
 
     GQueue *operator_stack = g_queue_new();
+    memstk_node *ops_memstk =
+        memstk_push((void **)&operator_stack, _ops_memstk_cleanup);
 
     for (unsigned int i = 0; i < line_size; i++) {
         char ch = line[i];
@@ -70,9 +75,15 @@ void parse_line(token_list *list, char *line) {
             switch (ch) {
                 case '(':
                     token_create(&tok, token_oparentheses, NULL);
+                    g_queue_push_tail(operator_stack, GINT_TO_POINTER('('));
                     break;
                 case ')':
                     token_create(&tok, token_cparentheses, NULL);
+                    char tail_op =
+                        GPOINTER_TO_INT(g_queue_peek_tail(operator_stack));
+                    if (tail_op != '(') {
+                        g_queue_pop_tail(operator_stack);
+                    }
                     break;
                 case '+':
                     token_create(&tok, token_plus, NULL);
@@ -147,8 +158,14 @@ void parse_line(token_list *list, char *line) {
         }
     }
 
-    g_queue_free(operator_stack);
     str_destroy(&tok_str);
+
+    if (!g_queue_is_empty(operator_stack)) {
+        err_throw(err_error, "Inbalance use of operators");
+    }
+
+    ops_memstk->freed = true;
+    g_queue_free(operator_stack);
 }
 
 static bool _is_whitespace(char ch) {
@@ -194,3 +211,9 @@ static void _remove_first_char(char *str) {
         }
     }
 }
+
+static void _ops_memstk_cleanup(void *itm) {
+    GQueue *operator_stack = (GQueue *)itm;
+    g_queue_free(operator_stack);
+}
+

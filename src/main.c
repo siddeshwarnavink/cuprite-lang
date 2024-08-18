@@ -33,18 +33,19 @@ int main() {
             } else {
                 parse_line(&list, input);
 
-                GList *iter;
-                for (iter = list->tokens; iter != NULL; iter = iter->next) {
-                    token tok = (token)iter->data;
-                    token_pp(tok);
+                if (list != NULL) {
+                    GList *iter;
+                    for (iter = list->tokens; iter != NULL; iter = iter->next) {
+                        token tok = (token)iter->data;
+                        token_pp(tok);
+                    }
+
+                    token eos_tok;
+                    token_create(&eos_tok, token_eos, NULL);
+                    token_list_append(&list, &eos_tok);
+                    ast_parse_tokens(list);
+                    token_list_clear(&list);
                 }
-
-                token eos_tok;
-                token_create(&eos_tok, token_eos, NULL);
-                token_list_append(&list, &eos_tok);
-
-                ast_parse_tokens(list);
-                token_list_clear(&list);
             }
         } else {
             printf("Statement too long\n");
