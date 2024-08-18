@@ -21,11 +21,12 @@ ASTDATA_CLEANUP(ast_arithmetic_divide);
 static void _ast_list_clean(void *lst);
 static void _ast_stack_clean(void *itm);
 static void _token_stack_clean(void *itm);
+static bool _condition_block(token_list list);
 static bool _variable_declaration(token_list list);
 static bool _operator_token(token tok);
-static int _arithmetic_operator_precedence(token_type type);
+static int _operator_precedence(token_type type);
 static void _extract_from_token(ast_node *node, token tok);
-static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
+static void _make_expression_node(ast_node *node, GQueue *operator_stack,
                                   GQueue *operand_stack);
 static void _operand_stack_cleanup(void *itm);
 static void _operator_stack_cleanup(void *itm);
@@ -60,13 +61,14 @@ memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
         case ast_arithmetic_subtract:
         case ast_arithmetic_multiply:
         case ast_arithmetic_divide:
+        case ast_cond_is:
             *data = (ast_data)malloc(sizeof(union uAstData));
-            (*data)->arithmetic =
-                (ast_arithmetic_data)malloc(sizeof(struct sAstArithmeticData));
-            if ((*data)->arithmetic == NULL) {
+            (*data)->expression =
+                (ast_expression_data)malloc(sizeof(struct sAstExpressionData));
+            if ((*data)->expression == NULL) {
                 free(*data);
                 err_throw(err_fatal,
-                          "Failed to allocate memory for ast_arithmetic_data");
+                          "Failed to allocate memory for ast_expression_data");
             }
             break;
         default:
@@ -119,9 +121,10 @@ void ast_destroy_node_data(ast_data *data, ast_node_type type) {
         case ast_arithmetic_subtract:
         case ast_arithmetic_multiply:
         case ast_arithmetic_divide:
-            ast_destroy_node(&((*data)->arithmetic->left));
-            ast_destroy_node(&((*data)->arithmetic->right));
-            free((*data)->arithmetic);
+        case ast_cond_is:
+            ast_destroy_node(&((*data)->expression->left));
+            ast_destroy_node(&((*data)->expression->right));
+            free((*data)->expression);
             break;
         case ast_declare:
             str_destroy(&((*data)->var_declare->name));
@@ -129,6 +132,7 @@ void ast_destroy_node_data(ast_data *data, ast_node_type type) {
             free((*data)->var_declare);
             break;
         case ast_str:
+        case ast_identf:
             str_destroy(&((*data)->val_str));
             break;
         case ast_func_call:
@@ -188,6 +192,14 @@ void ast_parse_tokens(token_list tokens) {
                 token my_tok = token_cpy(tok);
                 token_list_append(&line_tokens, &my_tok);
                 ast_node node = ast_parse_function_call(line_tokens);
+                if (node != NULL) {
+                    nodes = g_list_append(nodes, node);
+                }
+            }
+            // condition block
+            else if (_condition_block(line_tokens)) {
+                ast_node node =
+                    ast_parse_condition_block(line_tokens, token_iter);
                 if (node != NULL) {
                     nodes = g_list_append(nodes, node);
                 }
@@ -256,6 +268,14 @@ ast_node ast_parse_variable_declaration(token_list tokens) {
     node->data_memstk_node = node_d_memstk;
 
     token_list_destroy(&expression_toks);
+    return node;
+}
+
+ast_node ast_parse_condition_block(token_list tokens, GList *token_iter) {
+    ast_node node = NULL;
+
+    // TODO: Implement this logic
+
     return node;
 }
 
@@ -341,7 +361,7 @@ ast_node ast_parse_expression(token_list tokens) {
             while ((top = (token)g_queue_peek_tail(operator_stack)) != NULL &&
                    top->type != token_oparentheses) {
                 ast_node node;
-                _make_arithmetic_node(&node, operator_stack, operand_stack);
+                _make_expression_node(&node, operator_stack, operand_stack);
                 g_queue_push_tail(operand_stack, node);
             }
             token opara_tok = g_queue_pop_tail(operator_stack);
@@ -361,10 +381,10 @@ ast_node ast_parse_expression(token_list tokens) {
             token tok_cp = token_cpy(tok);
             token top;
             while ((top = (token)g_queue_peek_tail(operator_stack)) != NULL &&
-                   _arithmetic_operator_precedence(top->type) <=
-                       _arithmetic_operator_precedence(tok_cp->type)) {
+                   _operator_precedence(top->type) <=
+                       _operator_precedence(tok_cp->type)) {
                 ast_node node;
-                _make_arithmetic_node(&node, operator_stack, operand_stack);
+                _make_expression_node(&node, operator_stack, operand_stack);
                 g_queue_push_tail(operand_stack, node);
             }
             g_queue_push_tail(operator_stack, tok_cp);
@@ -374,7 +394,7 @@ ast_node ast_parse_expression(token_list tokens) {
     // process rest of stack
     while (!g_queue_is_empty(operator_stack)) {
         ast_node node;
-        _make_arithmetic_node(&node, operator_stack, operand_stack);
+        _make_expression_node(&node, operator_stack, operand_stack);
         g_queue_push_tail(operand_stack, node);
     }
 
@@ -408,6 +428,9 @@ void ast_pp(ast_node head) {
             }
             printf(")");
             break;
+        case ast_identf:
+            printf("%s", str_val(&head->data->val_str));
+            break;
         case ast_str:
             printf("\"%s\"", str_val(&head->data->val_str));
             break;
@@ -419,6 +442,9 @@ void ast_pp(ast_node head) {
             break;
         case ast_val_float:
             printf("%.2f", head->data->val_float);
+            break;
+        case ast_cond_is:
+            _arithmetic_pp("equal", head);
             break;
         case ast_arithmetic_add:
             _arithmetic_pp("add", head);
@@ -439,10 +465,16 @@ void ast_pp(ast_node head) {
 
 static void _arithmetic_pp(char *label, ast_node node) {
     printf("(%s ", label);
-    ast_pp(node->data->arithmetic->left);
+    ast_pp(node->data->expression->left);
     printf(" ");
-    ast_pp(node->data->arithmetic->right);
+    ast_pp(node->data->expression->right);
     printf(")");
+}
+
+static bool _condition_block(token_list list) {
+    if (list->tokens == NULL) return false;
+    token first_tok = (token)list->tokens->data;
+    return first_tok->type == token_when;
 }
 
 static bool _variable_declaration(token_list list) {
@@ -462,10 +494,10 @@ static bool _variable_declaration(token_list list) {
 static bool _operator_token(token tok) {
     return tok->type == token_plus || tok->type == token_hyphen ||
            tok->type == token_asterisk || tok->type == token_fslash ||
-           tok->type == token_percent;
+           tok->type == token_percent || tok->type == token_is;
 }
 
-static int _arithmetic_operator_precedence(token_type type) {
+static int _operator_precedence(token_type type) {
     switch (type) {
         case token_fslash:
             return 1;
@@ -514,13 +546,20 @@ static void _extract_from_token(ast_node *node, token tok) {
             ast_create_node(node, ast_bool, node_d);
             (*node)->data_memstk_node = node_d_memstk;
         } break;
+        case token_identf: {
+            memstk_node *node_d_memstk =
+                ast_create_node_data(&node_d, ast_identf);
+            str_cpy(&(node_d->val_str), &(tok->value));
+            ast_create_node(node, ast_identf, node_d);
+            (*node)->data_memstk_node = node_d_memstk;
+        } break;
         default:
             err_throw(err_error, "Invalid expression");
             break;
     }
 }
 
-static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
+static void _make_expression_node(ast_node *node, GQueue *operator_stack,
                                   GQueue *operand_stack) {
     ast_node opr1 = g_queue_pop_tail(operand_stack);
     ast_node opr2 = g_queue_pop_tail(operand_stack);
@@ -549,13 +588,16 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
             node_d_memstk =
                 ast_create_node_data(&node_d, ast_arithmetic_divide);
             break;
+        case token_is:
+            node_d_memstk = ast_create_node_data(&node_d, ast_cond_is);
+            break;
         default:
             err_throw(err_error, "Invalid arithmetic operator");
             break;
     }
 
-    node_d->arithmetic->left = opr2;
-    node_d->arithmetic->right = opr1;
+    node_d->expression->left = opr2;
+    node_d->expression->right = opr1;
 
     switch (opt->type) {
         case token_plus:
@@ -569,6 +611,9 @@ static void _make_arithmetic_node(ast_node *node, GQueue *operator_stack,
             break;
         case token_fslash:
             ast_create_node(node, ast_arithmetic_divide, node_d);
+            break;
+        case token_is:
+            ast_create_node(node, ast_cond_is, node_d);
             break;
         default:
             err_throw(err_error, "Invalid arithmetic operator");
@@ -594,6 +639,20 @@ static void _operator_stack_cleanup(void *itm) {
     }
 }
 
+static bool _is_operator_token(token tok) {
+    switch (tok->type) {
+        case token_plus:
+        case token_hyphen:
+        case token_asterisk:
+        case token_fslash:
+        case token_equal:
+        case token_is:
+            return true;
+        default:
+            return false;
+    }
+}
+
 static bool _function_call(token_list list) {
     GList *iter = list->tokens;
     if (!iter) return false;
@@ -603,7 +662,7 @@ static bool _function_call(token_list list) {
     token second_tok = (token)iter->data;
     if (first_tok != NULL && second_tok != NULL) {
         return first_tok->type == token_identf &&
-               second_tok->type != token_equal;
+               !_is_operator_token(second_tok);
     }
     return false;
 }

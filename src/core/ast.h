@@ -1,6 +1,7 @@
 #ifndef AST_H
 #define AST_H
 
+#include <glib.h>
 #include <stdbool.h>
 
 #include "token.h"
@@ -17,6 +18,7 @@
  */
 
 typedef enum {
+    ast_identf,
     ast_declare,
     ast_arithmetic_add,
     ast_arithmetic_subtract,
@@ -27,6 +29,8 @@ typedef enum {
     ast_str,
     ast_func_call,
     ast_bool,
+    ast_cond_block,
+    ast_cond_is
 } ast_node_type;
 
 typedef struct sAstNode *ast_node;
@@ -36,19 +40,24 @@ typedef struct sAstVarDeclare {
     ast_node value;
 } *ast_var_declare;
 
+typedef struct sAstConditionBlock {
+    ast_node expression;
+    GList *statements;
+} *ast_condition_block;
+
 typedef struct sAstFCall {
     str name;
     GList *args;
 } *ast_fcall;
 
-typedef struct sAstArithmeticData {
+typedef struct sAstExpressionData {
     ast_node left;
     ast_node right;
-} *ast_arithmetic_data;
+} *ast_expression_data;
 
 typedef union uAstData {
     ast_var_declare var_declare;
-    ast_arithmetic_data arithmetic;
+    ast_expression_data expression;
     ast_fcall fcall;
     int val_int;
     float val_float;
@@ -95,6 +104,12 @@ void ast_destroy_node_data(ast_data *data, ast_node_type type);
  * @param tokens Tokens list.
  */
 ast_node ast_parse_variable_declaration(token_list tokens);
+
+/**
+ * @brief Parse condition block.
+ * @param tokens Tokens list.
+ */
+ast_node ast_parse_condition_block(token_list tokens, GList *token_iter);
 
 /**
  * @brief Parse function call
