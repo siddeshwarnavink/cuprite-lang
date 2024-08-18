@@ -33,8 +33,7 @@ static bool _function_call(token_list list);
 void ast_create_node(ast_node *node, ast_node_type type, ast_data data) {
     (*node) = malloc(sizeof(struct sAstNode));
     if (*node == NULL) {
-        perror("Failed to allocate memory for node");
-        exit(EXIT_FAILURE);
+        err_throw(err_fatal, "Failed to allocate memory for node");
     }
 
     (*node)->type = type;
@@ -56,13 +55,16 @@ memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
             *data = (ast_data)malloc(sizeof(bool));
             break;
         case ast_arithmetic_add:
+        case ast_arithmetic_subtract:
+        case ast_arithmetic_multiply:
+        case ast_arithmetic_divide:
             *data = (ast_data)malloc(sizeof(union uAstData));
             (*data)->arithmetic =
                 (ast_arithmetic_data)malloc(sizeof(struct sAstArithmeticData));
             if ((*data)->arithmetic == NULL) {
                 free(*data);
-                perror("Failed to allocate memory for ast_arithmetic_data");
-                exit(EXIT_FAILURE);
+                err_throw(err_fatal,
+                          "Failed to allocate memory for ast_arithmetic_data");
             }
             break;
         default:
@@ -71,8 +73,7 @@ memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
     }
 
     if (*data == NULL) {
-        perror("Failed to allocate memory for ast_data");
-        exit(EXIT_FAILURE);
+        err_throw(err_fatal, "Failed to allocate memory for ast_data");
     }
 
     switch (type) {
@@ -81,16 +82,15 @@ memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
                 (ast_var_declare)malloc(sizeof(struct sAstVarDeclare));
             if ((*data)->var_declare == NULL) {
                 free((*data));
-                perror("Failed to allocate memory for ast_var_declare_data");
-                exit(EXIT_FAILURE);
+                err_throw(err_fatal,
+                          "Failed to allocate memory for ast_var_declare_data");
             }
             return memstk_push((void **)&(*data), _ast_declare_cleanup);
         case ast_func_call:
             (*data)->fcall = (ast_fcall)malloc(sizeof(struct sAstFCall));
             if ((*data)->fcall == NULL) {
                 free(*data);
-                perror("Failed to allocate memory for ast_fcall");
-                exit(EXIT_FAILURE);
+                err_throw(err_fatal, "Failed to allocate memory for ast_fcall");
             }
             (*data)->fcall->args = NULL;
             return memstk_push((void **)&(*data), _ast_func_call_cleanup);

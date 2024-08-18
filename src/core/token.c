@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "glib.h"
+#include "utils/err.h"
 #include "utils/memstk.h"
 #include "utils/str.h"
 
@@ -17,8 +18,7 @@ static bool _has_data(token_type type);
 void token_list_create(token_list *list) {
     *list = malloc(sizeof(struct sToken_list));
     if (*list == NULL) {
-        perror("Failed to allocate memory for token_list");
-        exit(EXIT_FAILURE);
+        err_throw(err_fatal, "Failed to allocate memory for token_list");
     }
     (*list)->tokens = NULL;
     (*list)->size = 0;
@@ -55,8 +55,7 @@ void token_list_destroy(token_list *list) {
 void token_create(token *token, token_type type, char *value) {
     (*token) = malloc(sizeof(struct sToken));
     if (*token == NULL) {
-        perror("Failed to allocate memory for token");
-        exit(EXIT_FAILURE);
+        err_throw(err_fatal, "Failed to allocate memory for token");
     }
 
     (*token)->type = type;
