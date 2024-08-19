@@ -33,6 +33,7 @@ _deps/
 *.dylib
 
 # Ignore IDE and editor specific files
+tags
 .vscode/
 .idea/
 *.swp

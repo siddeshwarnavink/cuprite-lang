@@ -161,6 +161,8 @@ static const char *_get_token_label(token_type type) {
             return "EoF";
         case token_isnot:
             return "isnot";
+        case token_and:
+            return "and";
         case token_comma:
             return ",";
         default:

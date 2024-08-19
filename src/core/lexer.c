@@ -156,6 +156,8 @@ void parse_line(token_list *list, char *line) {
                         token_create(&tok, token_isnot, NULL);
                     } else
                         token_create(&tok, token_not, NULL);
+                } else if (strcmp(idetf_str, "and") == 0) {
+                    token_create(&tok, token_and, NULL);
                 } else if (strcmp(idetf_str, "do") == 0) {
                     token_create(&tok, token_do, NULL);
                 } else if (strcmp(idetf_str, "end") == 0) {

@@ -37,6 +37,7 @@ typedef enum {
     token_less,
     token_greater_eq,
     token_less_eq,
+    token_and,
     token_do,
     token_end,
 } token_type;

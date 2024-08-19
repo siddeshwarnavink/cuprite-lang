@@ -67,6 +67,7 @@ memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
         case ast_cond_greater_eq:
         case ast_cond_lesser:
         case ast_cond_lesser_eq:
+        case ast_logical_and:
             *data = (ast_data)malloc(sizeof(union uAstData));
             (*data)->expression =
                 (ast_expression_data)malloc(sizeof(struct sAstExpressionData));
@@ -132,6 +133,7 @@ void ast_destroy_node_data(ast_data *data, ast_node_type type) {
         case ast_cond_greater_eq:
         case ast_cond_lesser:
         case ast_cond_lesser_eq:
+        case ast_logical_and:
             ast_destroy_node(&((*data)->expression->left));
             ast_destroy_node(&((*data)->expression->right));
             free((*data)->expression);
@@ -483,6 +485,9 @@ void ast_pp(ast_node head) {
         case ast_arithmetic_divide:
             _arithmetic_pp("div", head);
             break;
+        case ast_logical_and:
+            _arithmetic_pp("and", head);
+            break;
         default:
             printf("<Unknown>");
     }
@@ -530,6 +535,7 @@ static bool _operator_token(token tok) {
         case token_greater_eq:
         case token_less:
         case token_less_eq:
+        case token_and:
             return true;
         default:
             return false;
@@ -539,7 +545,6 @@ static bool _operator_token(token tok) {
 static int _operator_precedence(token_type type) {
     switch (type) {
         case token_fslash:
-            return 1;
         case token_asterisk:
             return 1;
         case token_percent:
@@ -548,6 +553,16 @@ static int _operator_precedence(token_type type) {
             return 3;
         case token_hyphen:
             return 4;
+        case token_greater:
+        case token_greater_eq:
+        case token_less:
+        case token_less_eq:
+            return 5;
+        case token_is:
+        case token_isnot:
+            return 6;
+        case token_and:
+            return 7;
         default:
             return 69;
     }
@@ -645,6 +660,9 @@ static void _make_expression_node(ast_node *node, GQueue *operator_stack,
         case token_less_eq:
             node_d_memstk = ast_create_node_data(&node_d, ast_cond_lesser_eq);
             break;
+        case token_and:
+            node_d_memstk = ast_create_node_data(&node_d, ast_logical_and);
+            break;
         default:
             err_throw(err_error, "Invalid arithmetic operator");
             break;
@@ -683,6 +701,9 @@ static void _make_expression_node(ast_node *node, GQueue *operator_stack,
             break;
         case token_less_eq:
             ast_create_node(node, ast_cond_lesser_eq, node_d);
+            break;
+        case token_and:
+            ast_create_node(node, ast_logical_and, node_d);
             break;
         default:
             err_throw(err_error, "Invalid arithmetic operator");

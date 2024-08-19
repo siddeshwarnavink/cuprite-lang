@@ -12,6 +12,7 @@ extern "C" {
 #include "utils/memstk.h"
 }
 
+#include "../helpers/ast_helpers.h"
 #include "../helpers/token_list_helpers.h"
 
 TEST(AstTest, TestNode) {
@@ -187,6 +188,21 @@ TEST(AstTest, TestBoolExp) {
                      "h");
         EXPECT_EQ(node->data->expression->right->type, ast_val_int);
         EXPECT_EQ(node->data->expression->right->data->val_int, 28);
+
+        ast_destroy_node(&node);
+        token_list_destroy(&list);
+        memstk_clean();
+    }
+    {
+        token_list list;
+        token_list_create(&list);
+        parse_line(&list, "a > 10 and b <= 12");
+        ast_node node = ast_parse_expression(list);
+
+        EXPECT_EQ(node->type, ast_logical_and);
+        EXPECT_EQ(node->data->expression->left->type, ast_cond_greater);
+        check_identf(node->data->expression->left->data->expression->left, "a");
+        check_int(node->data->expression->left->data->expression->right, 10);
 
         ast_destroy_node(&node);
         token_list_destroy(&list);
