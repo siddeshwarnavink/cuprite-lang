@@ -31,6 +31,17 @@ void token_list_append(token_list *list, token *tok) {
     (*list)->size++;
 }
 
+void token_list_remove_last(token_list *list) {
+    GList *last_itm = g_list_last((*list)->tokens);
+    if (last_itm != NULL) {
+        token tok = (token)last_itm->data;
+        tok->memstk_node->freed = true;
+        token_destroy(&tok);
+        (*list)->tokens = g_list_remove((*list)->tokens, last_itm->data);
+        (*list)->size--;
+    }
+}
+
 void token_list_clear(token_list *list) {
     token_list_destroy(list);
     token_list_create(list);
@@ -136,10 +147,20 @@ static const char *_get_token_label(token_type type) {
             return "%";
         case token_equal:
             return "=";
+        case token_greater:
+            return ">";
+        case token_less:
+            return "<";
+        case token_greater_eq:
+            return ">=";
+        case token_less_eq:
+            return "<=";
         case token_eos:
             return "EoS";
         case token_eof:
             return "EoF";
+        case token_isnot:
+            return "isnot";
         case token_comma:
             return ",";
         default:

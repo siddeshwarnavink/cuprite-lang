@@ -31,9 +31,14 @@ typedef enum {
     token_bool_f,
     token_when,
     token_is,
+    token_isnot,
     token_not,
+    token_greater,
+    token_less,
+    token_greater_eq,
+    token_less_eq,
     token_do,
-    token_end
+    token_end,
 } token_type;
 
 typedef struct sToken {
@@ -60,6 +65,12 @@ void token_list_create(token_list *list);
  * @param tok Token to append.
  */
 void token_list_append(token_list *list, token *tok);
+
+/**
+ * @brief Remove last element of list.
+ * @param list Token list pointer.
+ */
+void token_list_remove_last(token_list *list);
 
 /**
  * @brief Destroy token list.

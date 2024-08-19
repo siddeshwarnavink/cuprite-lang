@@ -12,6 +12,8 @@ extern "C" {
 #include "utils/memstk.h"
 }
 
+#include "../helpers/token_list_helpers.h"
+
 TEST(AstTest, TestNode) {
     ast_node n;
 
@@ -152,7 +154,7 @@ TEST(AstTest, TestBoolExp) {
         token_list_create(&list);
         parse_line(&list, "notsidd is not 11*3");
         ast_node node = ast_parse_expression(list);
-
+        token_list_pp(list);
         EXPECT_EQ(node->type, ast_cond_is_not);
         EXPECT_EQ(node->data->expression->left->type, ast_identf);
         EXPECT_STREQ(str_val(&(node->data->expression->left->data->val_str)),
@@ -168,6 +170,23 @@ TEST(AstTest, TestBoolExp) {
         EXPECT_EQ(node->data->expression->right->data->expression->right->data
                       ->val_int,
                   3);
+
+        ast_destroy_node(&node);
+        token_list_destroy(&list);
+        memstk_clean();
+    }
+    {
+        token_list list;
+        token_list_create(&list);
+        parse_line(&list, "h <= 28");
+        ast_node node = ast_parse_expression(list);
+        token_list_pp(list);
+        EXPECT_EQ(node->type, ast_cond_lesser_eq);
+        EXPECT_EQ(node->data->expression->left->type, ast_identf);
+        EXPECT_STREQ(str_val(&(node->data->expression->left->data->val_str)),
+                     "h");
+        EXPECT_EQ(node->data->expression->right->type, ast_val_int);
+        EXPECT_EQ(node->data->expression->right->data->val_int, 28);
 
         ast_destroy_node(&node);
         token_list_destroy(&list);

@@ -103,6 +103,20 @@ void parse_line(token_list *list, char *line) {
                 case '=':
                     token_create(&tok, token_equal, NULL);
                     break;
+                case '>':
+                    if (i + 1 < line_size && line[i + 1] == '=') {
+                        token_create(&tok, token_greater_eq, NULL);
+                        i++;
+                    } else
+                        token_create(&tok, token_greater, NULL);
+                    break;
+                case '<':
+                    if (i + 1 < line_size && line[i + 1] == '=') {
+                        token_create(&tok, token_less_eq, NULL);
+                        i++;
+                    } else
+                        token_create(&tok, token_less, NULL);
+                    break;
                 case ',':
                     token_create(&tok, token_comma, NULL);
                     break;
@@ -135,7 +149,13 @@ void parse_line(token_list *list, char *line) {
                 } else if (strcmp(idetf_str, "is") == 0) {
                     token_create(&tok, token_is, NULL);
                 } else if (strcmp(idetf_str, "not") == 0) {
-                    token_create(&tok, token_not, NULL);
+                    GList *last_itm = g_list_last((*list)->tokens);
+                    if (last_itm != NULL &&
+                        ((token)last_itm->data)->type == token_is) {
+                        token_list_remove_last(list);
+                        token_create(&tok, token_isnot, NULL);
+                    } else
+                        token_create(&tok, token_not, NULL);
                 } else if (strcmp(idetf_str, "do") == 0) {
                     token_create(&tok, token_do, NULL);
                 } else if (strcmp(idetf_str, "end") == 0) {
@@ -179,7 +199,14 @@ void parse_line(token_list *list, char *line) {
 }
 
 static bool _is_whitespace(char ch) {
-    return ch == ' ' || ch == '\t' || ch == '\r';
+    switch (ch) {
+        case ' ':
+        case '\t':
+        case '\r':
+            return true;
+        default:
+            return false;
+    }
 }
 
 static bool _is_number(char ch) {
@@ -187,10 +214,24 @@ static bool _is_number(char ch) {
 }
 
 static bool _is_operator(char ch) {
-    return ch == '(' || ch == ')' || ch == '+' || ch == '-' || ch == '*' ||
-           ch == '/' || ch == '%' || ch == '=' || ch == '\n' || ch == ',';
+    switch (ch) {
+        case '(':
+        case ')':
+        case '+':
+        case '-':
+        case '*':
+        case '/':
+        case '%':
+        case '=':
+        case '\n':
+        case ',':
+        case '<':
+        case '>':
+            return true;
+        default:
+            return false;
+    }
 }
-
 static token_type _number_type(char *num) {
     int len = strlen(num);
     bool is_float = false;

@@ -153,5 +153,41 @@ TEST(LexerTest, TestCondition) {
         token_list_destroy(&list);
         memstk_clean();
     }
+
+    {
+        token_list list;
+        token_list_create(&list);
+
+        parse_line(&list, "a >= b");
+
+        token_list_pp(list);
+
+        EXPECT_EQ(list->size, 3);
+
+        check_token_list(&list, 1, token_identf, "a");
+        check_token_list(&list, 2, token_greater_eq);
+        check_token_list(&list, 3, token_identf, "b");
+
+        token_list_destroy(&list);
+        memstk_clean();
+    }
+
+    {
+        token_list list;
+        token_list_create(&list);
+
+        parse_line(&list, "a is not b");
+
+        token_list_pp(list);
+
+        EXPECT_EQ(list->size, 3);
+
+        check_token_list(&list, 1, token_identf, "a");
+        check_token_list(&list, 2, token_isnot);
+        check_token_list(&list, 3, token_identf, "b");
+
+        token_list_destroy(&list);
+        memstk_clean();
+    }
 }
 

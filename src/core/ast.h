@@ -18,6 +18,7 @@
  */
 
 typedef enum {
+    ast_undef,
     ast_identf,
     ast_declare,
     ast_arithmetic_add,
@@ -31,7 +32,11 @@ typedef enum {
     ast_bool,
     ast_cond_block,
     ast_cond_is,
-    ast_cond_is_not
+    ast_cond_is_not,
+    ast_cond_greater,
+    ast_cond_greater_eq,
+    ast_cond_lesser,
+    ast_cond_lesser_eq,
 } ast_node_type;
 
 typedef struct sAstNode *ast_node;
