@@ -163,6 +163,8 @@ static const char *_get_token_label(token_type type) {
             return "isnot";
         case token_and:
             return "and";
+        case token_or:
+            return "or";
         case token_comma:
             return ",";
         default:

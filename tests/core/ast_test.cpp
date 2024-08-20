@@ -194,6 +194,49 @@ TEST(AstTest, TestBoolExp) {
         token_list_destroy(&list);
         memstk_clean();
     }
+    {
+        token_list list;
+        token_list_create(&list);
+        parse_line(&list, "a > 10 or b <= 12");
+        ast_node node = ast_parse_expression(list);
+
+        check_exp(node, ast_logical_or,
+                  [](ast_expression_data and_data) -> void {
+                      check_exp(and_data->left, ast_cond_greater,
+                                [](ast_expression_data gr_data) -> void {
+                                    check_identf(gr_data->left, "a");
+                                    check_int(gr_data->right, 10);
+                                });
+                      check_exp(and_data->right, ast_cond_lesser_eq,
+                                [](ast_expression_data lse_data) -> void {
+                                    check_identf(lse_data->left, "b");
+                                    check_int(lse_data->right, 12);
+                                });
+                  });
+
+        ast_destroy_node(&node);
+        token_list_destroy(&list);
+        memstk_clean();
+    }
+    {
+        token_list list;
+        token_list_create(&list);
+        parse_line(&list, "not a > 10");
+        ast_node node = ast_parse_expression(list);
+
+        check_exp(node, ast_logical_not,
+                  [](ast_expression_data and_data) -> void {
+                      check_exp(and_data->right, ast_cond_greater,
+                                [](ast_expression_data gr_data) -> void {
+                                    check_identf(gr_data->left, "a");
+                                    check_int(gr_data->right, 10);
+                                });
+                  });
+
+        ast_destroy_node(&node);
+        token_list_destroy(&list);
+        memstk_clean();
+    }
 }
 
 TEST(AstTest, TestVariableDeclaration) {

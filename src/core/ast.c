@@ -68,6 +68,8 @@ memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
         case ast_cond_lesser:
         case ast_cond_lesser_eq:
         case ast_logical_and:
+        case ast_logical_or:
+        case ast_logical_not:
             *data = (ast_data)malloc(sizeof(union uAstData));
             (*data)->expression =
                 (ast_expression_data)malloc(sizeof(struct sAstExpressionData));
@@ -134,7 +136,12 @@ void ast_destroy_node_data(ast_data *data, ast_node_type type) {
         case ast_cond_lesser:
         case ast_cond_lesser_eq:
         case ast_logical_and:
+        case ast_logical_or:
             ast_destroy_node(&((*data)->expression->left));
+            ast_destroy_node(&((*data)->expression->right));
+            free((*data)->expression);
+            break;
+        case ast_logical_not:
             ast_destroy_node(&((*data)->expression->right));
             free((*data)->expression);
             break;
@@ -488,6 +495,12 @@ void ast_pp(ast_node head) {
         case ast_logical_and:
             _arithmetic_pp("and", head);
             break;
+        case ast_logical_or:
+            _arithmetic_pp("or", head);
+            break;
+        case ast_logical_not:
+            _arithmetic_pp("not", head);
+            break;
         default:
             printf("<Unknown>");
     }
@@ -495,8 +508,10 @@ void ast_pp(ast_node head) {
 
 static void _arithmetic_pp(char *label, ast_node node) {
     printf("(%s ", label);
-    ast_pp(node->data->expression->left);
-    printf(" ");
+    if (node->type != ast_logical_not) {
+        ast_pp(node->data->expression->left);
+        printf(" ");
+    }
     ast_pp(node->data->expression->right);
     printf(")");
 }
@@ -536,6 +551,7 @@ static bool _operator_token(token tok) {
         case token_less:
         case token_less_eq:
         case token_and:
+        case token_or:
             return true;
         default:
             return false;
@@ -544,25 +560,27 @@ static bool _operator_token(token tok) {
 
 static int _operator_precedence(token_type type) {
     switch (type) {
+        case token_not:
+            return 10;
         case token_fslash:
         case token_asterisk:
-            return 1;
-        case token_percent:
             return 2;
-        case token_plus:
+        case token_percent:
             return 3;
-        case token_hyphen:
+        case token_plus:
             return 4;
+        case token_hyphen:
+            return 5;
         case token_greater:
         case token_greater_eq:
         case token_less:
         case token_less_eq:
-            return 5;
+            return 6;
         case token_is:
         case token_isnot:
-            return 6;
-        case token_and:
             return 7;
+        case token_and:
+            return 8;
         default:
             return 69;
     }
@@ -615,104 +633,130 @@ static void _extract_from_token(ast_node *node, token tok) {
 
 static void _make_expression_node(ast_node *node, GQueue *operator_stack,
                                   GQueue *operand_stack) {
-    ast_node opr1 = g_queue_pop_tail(operand_stack);
-    ast_node opr2 = g_queue_pop_tail(operand_stack);
     token opt = g_queue_pop_tail(operator_stack);
 
-    if (opr1 == NULL || opr2 == NULL || opt == NULL) {
-        return;
+    if (opt->type == token_not) {
+        ast_node opr = g_queue_pop_tail(operand_stack);
+        if (opr == NULL) return;
+
+        ast_data node_d;
+        memstk_node *node_d_memstk =
+            ast_create_node_data(&node_d, ast_logical_not);
+
+        node_d->expression->right = opr;
+
+        ast_create_node(node, ast_logical_not, node_d);
+        (*node)->data_memstk_node = node_d_memstk;
+
+        token_destroy(&opt);
+    } else {
+        ast_node opr1 = g_queue_pop_tail(operand_stack);
+        ast_node opr2 = g_queue_pop_tail(operand_stack);
+
+        if (opr1 == NULL || opr2 == NULL || opt == NULL) {
+            return;
+        }
+
+        ast_data node_d;
+        memstk_node *node_d_memstk = NULL;
+
+        switch (opt->type) {
+            case token_plus:
+                node_d_memstk =
+                    ast_create_node_data(&node_d, ast_arithmetic_add);
+                break;
+            case token_hyphen:
+                node_d_memstk =
+                    ast_create_node_data(&node_d, ast_arithmetic_subtract);
+                break;
+            case token_asterisk:
+                node_d_memstk =
+                    ast_create_node_data(&node_d, ast_arithmetic_multiply);
+                break;
+            case token_fslash:
+                node_d_memstk =
+                    ast_create_node_data(&node_d, ast_arithmetic_divide);
+                break;
+            case token_is:
+                node_d_memstk = ast_create_node_data(&node_d, ast_cond_is);
+                break;
+            case token_isnot:
+                node_d_memstk = ast_create_node_data(&node_d, ast_cond_is_not);
+                break;
+            case token_greater:
+                node_d_memstk = ast_create_node_data(&node_d, ast_cond_greater);
+                break;
+            case token_greater_eq:
+                node_d_memstk =
+                    ast_create_node_data(&node_d, ast_cond_greater_eq);
+                break;
+            case token_less:
+                node_d_memstk = ast_create_node_data(&node_d, ast_cond_lesser);
+                break;
+            case token_less_eq:
+                node_d_memstk =
+                    ast_create_node_data(&node_d, ast_cond_lesser_eq);
+                break;
+            case token_and:
+                node_d_memstk = ast_create_node_data(&node_d, ast_logical_and);
+                break;
+            case token_or:
+                node_d_memstk = ast_create_node_data(&node_d, ast_logical_or);
+                break;
+            default:
+                err_throw(err_error, "Invalid arithmetic operator");
+                break;
+        }
+
+        node_d->expression->left = opr2;
+        node_d->expression->right = opr1;
+
+        switch (opt->type) {
+            case token_plus:
+                ast_create_node(node, ast_arithmetic_add, node_d);
+                break;
+            case token_hyphen:
+                ast_create_node(node, ast_arithmetic_subtract, node_d);
+                break;
+            case token_asterisk:
+                ast_create_node(node, ast_arithmetic_multiply, node_d);
+                break;
+            case token_fslash:
+                ast_create_node(node, ast_arithmetic_divide, node_d);
+                break;
+            case token_is:
+                ast_create_node(node, ast_cond_is, node_d);
+                break;
+            case token_isnot:
+                ast_create_node(node, ast_cond_is_not, node_d);
+                break;
+            case token_greater:
+                ast_create_node(node, ast_cond_greater, node_d);
+                break;
+            case token_greater_eq:
+                ast_create_node(node, ast_cond_greater_eq, node_d);
+                break;
+            case token_less:
+                ast_create_node(node, ast_cond_lesser, node_d);
+                break;
+            case token_less_eq:
+                ast_create_node(node, ast_cond_lesser_eq, node_d);
+                break;
+            case token_and:
+                ast_create_node(node, ast_logical_and, node_d);
+                break;
+            case token_or:
+                ast_create_node(node, ast_logical_or, node_d);
+                break;
+            default:
+                err_throw(err_error, "Invalid arithmetic operator");
+                break;
+        }
+
+        (*node)->data_memstk_node = node_d_memstk;
+
+        token_destroy(&opt);
     }
-
-    ast_data node_d;
-    memstk_node *node_d_memstk = NULL;
-
-    switch (opt->type) {
-        case token_plus:
-            node_d_memstk = ast_create_node_data(&node_d, ast_arithmetic_add);
-            break;
-        case token_hyphen:
-            node_d_memstk =
-                ast_create_node_data(&node_d, ast_arithmetic_subtract);
-            break;
-        case token_asterisk:
-            node_d_memstk =
-                ast_create_node_data(&node_d, ast_arithmetic_multiply);
-            break;
-        case token_fslash:
-            node_d_memstk =
-                ast_create_node_data(&node_d, ast_arithmetic_divide);
-            break;
-        case token_is:
-            node_d_memstk = ast_create_node_data(&node_d, ast_cond_is);
-            break;
-        case token_isnot:
-            node_d_memstk = ast_create_node_data(&node_d, ast_cond_is_not);
-            break;
-        case token_greater:
-            node_d_memstk = ast_create_node_data(&node_d, ast_cond_greater);
-            break;
-        case token_greater_eq:
-            node_d_memstk = ast_create_node_data(&node_d, ast_cond_greater_eq);
-            break;
-        case token_less:
-            node_d_memstk = ast_create_node_data(&node_d, ast_cond_lesser);
-            break;
-        case token_less_eq:
-            node_d_memstk = ast_create_node_data(&node_d, ast_cond_lesser_eq);
-            break;
-        case token_and:
-            node_d_memstk = ast_create_node_data(&node_d, ast_logical_and);
-            break;
-        default:
-            err_throw(err_error, "Invalid arithmetic operator");
-            break;
-    }
-
-    node_d->expression->left = opr2;
-    node_d->expression->right = opr1;
-
-    switch (opt->type) {
-        case token_plus:
-            ast_create_node(node, ast_arithmetic_add, node_d);
-            break;
-        case token_hyphen:
-            ast_create_node(node, ast_arithmetic_subtract, node_d);
-            break;
-        case token_asterisk:
-            ast_create_node(node, ast_arithmetic_multiply, node_d);
-            break;
-        case token_fslash:
-            ast_create_node(node, ast_arithmetic_divide, node_d);
-            break;
-        case token_is:
-            ast_create_node(node, ast_cond_is, node_d);
-            break;
-        case token_isnot:
-            ast_create_node(node, ast_cond_is_not, node_d);
-            break;
-        case token_greater:
-            ast_create_node(node, ast_cond_greater, node_d);
-            break;
-        case token_greater_eq:
-            ast_create_node(node, ast_cond_greater_eq, node_d);
-            break;
-        case token_less:
-            ast_create_node(node, ast_cond_lesser, node_d);
-            break;
-        case token_less_eq:
-            ast_create_node(node, ast_cond_lesser_eq, node_d);
-            break;
-        case token_and:
-            ast_create_node(node, ast_logical_and, node_d);
-            break;
-        default:
-            err_throw(err_error, "Invalid arithmetic operator");
-            break;
-    }
-
-    (*node)->data_memstk_node = node_d_memstk;
-
-    token_destroy(&opt);
 }
 
 static void _operand_stack_cleanup(void *itm) {

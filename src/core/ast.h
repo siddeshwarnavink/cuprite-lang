@@ -37,7 +37,9 @@ typedef enum {
     ast_cond_greater_eq,
     ast_cond_lesser,
     ast_cond_lesser_eq,
-    ast_logical_and
+    ast_logical_and,
+    ast_logical_or,
+    ast_logical_not
 } ast_node_type;
 
 typedef struct sAstNode *ast_node;
