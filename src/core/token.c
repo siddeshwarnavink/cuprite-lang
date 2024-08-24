@@ -93,8 +93,10 @@ void token_pp(token tok) {
 }
 
 void token_destroy(token *token) {
-    str my_str = (*token)->value;
-    str_destroy(&my_str);
+    if ((*token)->value != NULL) {
+        str my_str = (*token)->value;
+        str_destroy(&my_str);
+    }
     (*token)->memstk_node->freed = true;
     free(*token);
     *token = NULL;

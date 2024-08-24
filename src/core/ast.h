@@ -65,6 +65,7 @@ typedef struct sAstExpressionData {
 } *ast_expression_data;
 
 typedef union uAstData {
+    ast_condition_block condition_block;
     ast_var_declare var_declare;
     ast_expression_data expression;
     ast_fcall fcall;
@@ -118,7 +119,7 @@ ast_node ast_parse_variable_declaration(token_list tokens);
  * @brief Parse condition block.
  * @param tokens Tokens list.
  */
-ast_node ast_parse_condition_block(token_list tokens, GList *token_iter);
+ast_node ast_parse_condition_block(token_list tokens);
 
 /**
  * @brief Parse function call
