@@ -114,6 +114,7 @@ memstk_node *ast_create_node_data(ast_data *data, ast_node_type type) {
       free(*data);
       err_throw(err_fatal, "Failed to allocate memory for ast_condition_block");
     }
+    (*data)->condition_block->statements = NULL;
     return memstk_push((void **)&(*data), _ast_cond_block_cleanup);
     break;
   case ast_arithmetic_add:
@@ -173,11 +174,13 @@ void ast_destroy_node_data(ast_data *data, ast_node_type type) {
   } break;
   case ast_cond_block: {
     ast_destroy_node(&((*data)->condition_block->expression));
-    GList *iter;
-    for (iter = (*data)->condition_block->statements; iter != NULL;
-         iter = iter->next) {
-      ast_node node = (ast_node)iter->data;
-      ast_destroy_node(&node);
+    if ((*data)->condition_block->statements != NULL) {
+      GList *iter;
+      for (iter = (*data)->condition_block->statements; iter != NULL;
+           iter = iter->next) {
+        ast_node node = (ast_node)iter->data;
+        ast_destroy_node(&node);
+      }
     }
     free((*data)->condition_block);
   } break;
@@ -347,6 +350,25 @@ ast_node ast_parse_condition_block(token_list tokens) {
   node_d->condition_block->expression = ast_parse_expression(expr_toks);
   token_list_destroy(&expr_toks);
 
+  GQueue *block_stack = g_queue_new();
+  memstk_node *ops_memstk =
+      memstk_push((void **)&block_stack, _blockstack_memstk_cleanup);
+  g_queue_push_tail(block_stack, GINT_TO_POINTER('b'));
+
+  for (; iter != NULL; iter = iter->next) {
+    token tok = (token)iter->data;
+    switch (tok->type) {
+    case token_do:
+      g_queue_push_tail(block_stack, GINT_TO_POINTER('b'));
+      break;
+    case token_end:
+      g_queue_pop_tail(block_stack);
+    default:
+      // TODO: Push statment to node_d
+      break;
+    }
+  }
+
   ast_create_node(&node, ast_cond_block, node_d);
   node->data_memstk_node = node_d_memstk;
 
@@ -500,6 +522,11 @@ void ast_pp(ast_node head) {
       ast_pp((ast_node)iter->data);
       printf(") ");
     }
+    printf(")");
+    break;
+  case ast_cond_block:
+    printf("(whn ");
+    ast_pp(head->data->condition_block->expression);
     printf(")");
     break;
   case ast_identf:
